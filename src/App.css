@@ -1,3 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Antic+Slab&family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap');
+body {
+  font-family: 'Roboto Condensed', sans-serif;
+  background-color: #f0f0f0;
+  margin: 0;
+  padding: 20px;
+}
 .App {
   text-align: center;
 }
