@@ -1,45 +1,88 @@
 @import url('https://fonts.googleapis.com/css2?family=Antic+Slab&family=Roboto+Condensed:ital,wght@0,100..900;1,100..900&display=swap');
+@import url('https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css');
+
 body {
   font-family: 'Roboto Condensed', sans-serif;
-  background-color: #f0f0f0;
+  background-color: #f8f9fa;
   margin: 0;
-  padding: 20px;
+  padding-top: 76px; /* Height of fixed header */
 }
+
 .App {
   text-align: center;
-}
-
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
 }
 
-.App-link {
-  color: #61dafb;
+main {
+  flex: 1;
+}
+
+.footer {
+  margin-top: auto;
+}
+
+/* Header customizations */
+.navbar-brand {
+  font-weight: 700 !important;
+  color: #d32f2f !important;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+}
+
+.navbar-dark .navbar-nav .nav-link {
+  color: #333 !important;
+  font-weight: 500;
+  transition: color 0.3s;
+}
+
+.navbar-dark .navbar-nav .nav-link:hover {
+  color: #d32f2f !important;
+}
+
+.btn-outline-light:hover {
+  background-color: #d32f2f;
+  border-color: #d32f2f;
+}
+
+/* Home page */
+.home {
+  padding: 80px 20px;
+  background: linear-gradient(135deg, #ff9a56 0%, #ff6b6b 100%);
+  color: white;
+  text-align: center;
+}
+
+.home h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+/* Footer customizations */
+.footer a {
+  transition: color 0.3s;
+}
+
+.footer a:hover {
+  color: #ff6b6b !important;
+}
+
+.footer h5 {
+  color: #ff6b6b;
+  margin-bottom: 1rem;
+}
+
+/* Remove CRA animation leftovers */
+.App-logo {
+  display: none;
+}
+
+.App-header {
+  display: none;
 }
 
 @keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
