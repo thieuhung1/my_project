@@ -1,9 +1,27 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useCart } from '../../contexts/CartContext';
+import { useAuth } from '../../contexts/AuthContext';
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap-icons/font/bootstrap-icons.css";
 
 const Header = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const { cartCount } = useCart();
+  const { isAuthenticated, dispatch, user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/search?q=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleLogout = () => {
+    dispatch({ type: 'LOGOUT' });
+  };
+
   return (
     <nav className="navbar navbar-expand-lg navbar-dark bg-warning fixed-top shadow-lg">
       <div className="container">
@@ -27,27 +45,57 @@ const Header = () => {
               <Link className="nav-link" to="/">Trang Chủ</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/menu">Menu</Link>
+              <Link className="nav-link" to="/products">Sản Phẩm</Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/promo">Khuyến Mãi</Link>
+              <Link className="nav-link" to="/orders">Đơn Hàng</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/my-account">Tài Khoản</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/contact">Liên Hệ</Link>
             </li>
           </ul>
-          <form className="d-flex me-3">
-            <input className="form-control me-2" type="search" placeholder="Tìm kiếm món ăn..." aria-label="Search" />
-            <button className="btn btn-outline-light" type="submit"><i className="bi bi-search"></i></button>
+          <form className="d-flex me-3" onSubmit={handleSearch}>
+            <input 
+              className="form-control me-2" 
+              type="search" 
+              placeholder="Tìm kiếm món ăn..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            <button className="btn btn-outline-light" type="submit">
+              <i className="bi bi-search"></i>
+            </button>
           </form>
           <div className="d-flex">
             <Link to="/cart" className="btn btn-outline-light me-2 position-relative">
               <i className="bi bi-cart fs-4"></i>
-              <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                3
-                <span className="visually-hidden">Shopping items</span>
-              </span>
+              {cartCount > 0 && (
+                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                  {cartCount}
+                  <span className="visually-hidden">unread messages</span>
+                </span>
+              )}
             </Link>
-            <Link to="/login" className="btn btn-outline-light">
-              <i className="bi bi-person me-1"></i>Đăng Nhập
-            </Link>
+            {isAuthenticated ? (
+              <div className="dropdown">
+                <Link className="btn btn-outline-light dropdown-toggle" to="/my-account" role="button" data-bs-toggle="dropdown">
+                  <i className="bi bi-person me-1"></i>{user?.name || 'User'}
+                </Link>
+                <ul className="dropdown-menu">
+                  <li><Link className="dropdown-item" to="/my-account">Tài Khoản</Link></li>
+                  <li><Link className="dropdown-item" to="/orders">Đơn Hàng</Link></li>
+                  <li><hr className="dropdown-divider" /></li>
+                  <li><button className="dropdown-item" onClick={handleLogout}>Đăng Xuất</button></li>
+                </ul>
+              </div>
+            ) : (
+              <Link to="/signin" className="btn btn-outline-light">
+                <i className="bi bi-person me-1"></i>Đăng Nhập
+              </Link>
+            )}
           </div>
         </div>
       </div>

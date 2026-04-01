@@ -1,70 +1,66 @@
-# Getting Started with Create React App
+# 🚀 FoodHub - Frontend Giao Đồ Ăn Việt Nam
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## 📋 **Tính Năng Hoàn Chỉnh**
+✅ **12 Pages**: Home, Products, ProductDetail, Cart, SignIn/SignUp, MyList, Orders, Search, MyAccount, Contact, About  
+✅ **State Management**: Context API (Auth/Cart/Product) + localStorage  
+✅ **UI/UX**: Bootstrap 5 responsive, theme cam-trắng (#FF6B35), animations, loading spinners  
+✅ **Performance**: Lazy loading, optimized grids, mock API delay  
+✅ **Food VN**: Phở, Bánh Mì, Bánh Xèo... với ảnh ASSETS/Images  
 
-## Available Scripts
+## 🛠 **Tech Stack**
+```
+React 19 + Router v7
+Bootstrap 5 + Icons
+Context API + useReducer
+ESLint + Prettier
+CRA (react-scripts 5.0.1)
+```
 
-In the project directory, you can run:
+## 🚀 **Chạy Project**
+```bash
+npm install
+npm start
+```
+Mở http://localhost:3000
 
-### `npm start`
+## 📁 **Cấu Trúc Code**
+```
+src/
+├── App.js - Router + Layout
+├── contexts/
+│   ├── AuthContext.js - Đăng nhập localStorage
+│   ├── CartContext.js - Giỏ hàng reducer + count badge
+│   └── ProductContext.js - Mock API + loading VN foods
+├── Pages/ - 12 pages w/ useContext
+└── Conponents/Header.js - Nav responsive + search/cart
+```
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+## ✨ **Tối Ưu Nổi Bật**
+- **Products/MyList/Search**: Grid responsive `col-xl-3 lg-4 md-6`, filter/search/pagination, hover-lift
+- **ProductDetail**: Carousel, quantity input, badges Hot/free ship, breadcrumb
+- **Home**: Hero slider, featured carousel w/ IntersectionObserver fade-in
+- **Header**: Fixed nav, cart badge live, search `/search?q=query`
+- **Cart**: Table editable quantity, remove, total VNĐ
+- **Auth**: Protected Orders/MyAccount, mock login
+- **Performance**: Loading spinners, lazy imgs, memoized products
+- **Responsive**: Mobile-first Bootstrap, hamburger menu
+- **Animations**: CSS keyframes fadeInUp/slideIn, hover scale/shadow
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+## 🎨 **Theme Cam-Trắng**
+```css
+:root {
+  --orange: #FF6B35;
+  --white: #FFFFFF;
+  --shadow: 0 4px 20px rgba(255,107,53,0.15);
+}
+```
 
-### `npm test`
+## 📱 **Demo Flow**
+1. Home → Featured products → Add to Cart
+2. Products → Filter → Detail → Quantity → Cart
+3. SignUp/Login → MyAccount/Orders
+4. Search "phở" → Results grid
+5. Cart → Checkout → Orders history
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+**Ready production, dễ kết nối API backend! 🔥**
 
-### `npm run build`
-
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
-
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
-
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
-
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
-
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
