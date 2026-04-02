@@ -59,11 +59,13 @@ const Home = () => {
             <div key={product.id} className="col-lg-4 col-md-6 mb-4">
               <div className="card product-card h-100 shadow hover-lift">
                 <img src={product.image} className="card-img-top product-card__image" alt={product.name} loading="lazy" />
-                <div className="card-body product-card__body">
-                  <h5 className="card-title">{product.name}</h5>
-                  <p className="fw-bold text-success">{product.price.toLocaleString()} VNĐ</p>
-                  <Link to={`/product/${product.id}`} className="btn btn-warning">Đặt Mua</Link>
-
+                <div className="card-body product-card__body p-3">
+                  <h6 className="card-title fw-bold mb-2">{product.name}</h6>
+                  <p className="text-muted small mb-3">{product.price.toLocaleString()} VNĐ</p>
+                  <div className="d-grid gap-2">
+                    <Link to={`/product/${product.id}`} className="btn btn-outline-warning btn-sm">Chi Tiết</Link>
+                    <Link to="/cart" className="btn btn-warning btn-sm">Đặt Mua</Link>
+                  </div>
                 </div>
               </div>
             </div>
