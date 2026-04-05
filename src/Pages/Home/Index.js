@@ -1,4 +1,4 @@
-﻿import React from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import "bootstrap/dist/css/bootstrap.min.css";
@@ -51,14 +51,14 @@ const Home = () => {
         {/* Featured */}
         <div className="text-center mb-5 animate__animated animate__fadeInUp">
           <h2>Phổ Biến Nhất</h2>
-          <p clasumName="lead">Những món ăn bán chạy nhất tuần</p>
+          <p className="lead">Những món ăn bán chạy nhất tuần</p>
         </div>
 
         <div className="row">
           {products.slice(0, 6).map(product => (
             <div key={product.id} className="col-lg-4 col-md-6 mb-4">
-              <div className="card product-card h-100 shadow hover-lift">
-                <img src={product.image} className="card-img-top product-card__image" alt={product.name} loading="lazy" />
+              <div className="card product-card h-100 shadow hover-lift border-0">
+                <img src={product.imageUrl || product.image} className="card-img-top product-card__image" alt={product.name} loading="lazy" style={{height: '200px', objectFit: 'cover'}} />
                 <div className="card-body product-card__body p-3">
                   <h6 className="card-title fw-bold mb-2">{product.name}</h6>
                   <p className="text-muted small mb-3">{product.price.toLocaleString()} VNĐ</p>

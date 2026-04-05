@@ -8,7 +8,7 @@ import "bootstrap-icons/font/bootstrap-icons.css";
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { cartCount } = useCart();
-  const { isAuthenticated, dispatch, user } = useAuth();
+  const { isAuthenticated, signOut, user, userProfile } = useAuth();
   const navigate = useNavigate();
 
   const handleSearch = (e) => {
@@ -18,8 +18,9 @@ const Header = () => {
     }
   };
 
-  const handleLogout = () => {
-    dispatch({ type: 'LOGOUT' });
+  const handleLogout = async () => {
+    await signOut();
+    navigate('/signin');
   };
 
   return (
@@ -81,8 +82,9 @@ const Header = () => {
             </Link>
             {isAuthenticated ? (
               <div className="dropdown">
-                <Link className="btn btn-outline-light dropdown-toggle" to="/my-account" role="button" data-bs-toggle="dropdown">
-                  <i className="bi bi-person me-1"></i>{user?.name || 'User'}
+                <Link className="btn btn-outline-light dropdown-toggle d-flex align-items-center gap-2" to="/my-account" role="button" data-bs-toggle="dropdown">
+                  <i className="bi bi-person-circle fs-5"></i>
+                  <span>{userProfile?.displayName || user?.displayName || 'Thành viên'}</span>
                 </Link>
                 <ul className="dropdown-menu">
                   <li><Link className="dropdown-item" to="/my-account">Tài Khoản</Link></li>

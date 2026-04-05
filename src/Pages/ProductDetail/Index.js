@@ -7,13 +7,13 @@ const ProductDetail = () => {
   const { id } = useParams();
   const { products } = useProducts();
   const { dispatch } = useCart();
-  const product = products.find(p => p.id === parseInt(id));
+  const product = products.find(p => String(p.id) === String(id));
 
-  if (!product) return <div className="container my-5">Sản phẩm không tồn tại</div>;
+  if (!product) return <div className="container my-5 text-center mt-5 pt-5"><h3>Sản phẩm không tồn tại</h3><Link to="/products" className="btn btn-warning mt-3">Quay lại cửa hàng</Link></div>;
 
   return (
     <div className="container my-5">
-      <nav aria-label="breadcrumb">
+      <nav aria-label="breadcrumb" className="mt-5 pt-3">
         <ol className="breadcrumb">
           <li className="breadcrumb-item"><Link to="/">Trang Chủ</Link></li>
           <li className="breadcrumb-item"><Link to="/products">Sản Phẩm</Link></li>
@@ -23,10 +23,10 @@ const ProductDetail = () => {
 
       <div className="row g-5">
         <div className="col-lg-6">
-          <div id="detailCarousel" className="carousel slide shadow" data-bs-ride="false">
+          <div id="detailCarousel" className="carousel slide shadow-sm overflow-hidden" style={{borderRadius: '20px'}}>
             <div className="carousel-inner">
               <div className="carousel-item active">
-                <img src={product.image} className="d-block w-100" alt={product.name} style={{height: '500px', objectFit: 'cover', borderRadius: '15px'}} />
+                <img src={product.imageUrl || product.image} className="d-block w-100" alt={product.name} style={{height: '500px', objectFit: 'cover'}} />
               </div>
             </div>
             <button className="carousel-control-prev" type="button" data-bs-target="#detailCarousel" data-bs-slide="prev">

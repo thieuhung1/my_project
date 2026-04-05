@@ -1,42 +1,120 @@
-import React, { createContext, useReducer, useContext, useEffect, useState } from 'react';
-const sampleProducts = [
-  { id: 1, name: 'Phở Bò', price: 50000, image: '/ASSETS/Images/phở bò.jpeg', description: 'Phở bò truyền thống nóng hổi', category: 'pho' },
-  { id: 2, name: 'Bánh Mì', price: 25000, image: '/ASSETS/Images/bánh mì.jpg', description: 'Bánh mì pate thịt nguội', category: 'banhmi' },
-  { id: 3, name: 'Bánh Xèo', price: 60000, image: '/ASSETS/Images/bánh xèo.jpg', description: 'Bánh xèo giòn tan tôm thịt', category: 'banhxeo' },
-  { id: 4, name: 'Gỏi Cuốn', price: 30000, image: '/ASSETS/Images/Gỏi cuốn.webp', description: 'Gỏi cuốn tôm thịt tươi', category: 'goi' },
-  { id: 5, name: 'Chả Cuốn', price: 40000, image: '/ASSETS/Images/chả cuốn.jpg', description: 'Chả cuốn nem nướng', category: 'cha' },
-  { id: 6, name: 'Mì Quảng', price: 55000, image: '/ASSETS/Images/mì quảng.jpg', description: 'Mì quảng tôm thịt đặc sản', category: 'mi' },
-];
+// ============================================================
+// ProductContext.js - Context quản lý sản phẩm (Firebase Firestore)
+// Thay thế dữ liệu tĩnh bằng dữ liệu thật từ Firestore
+// ============================================================
+
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import {
+  getAllProducts,
+  getProductsByCategory,
+  getFeaturedProducts,
+  getProductById,
+  getAllCategories,
+} from '../backend';
 
 const ProductContext = createContext();
 
+// Hook để dùng trong các component
 export const useProducts = () => useContext(ProductContext);
 
 export const ProductProvider = ({ children }) => {
-  const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [products, setProducts]           = useState([]);    // Tất cả sản phẩm
+  const [featured, setFeatured]           = useState([]);    // Sản phẩm nổi bật
+  const [categories, setCategories]       = useState([]);    // Danh mục
+  const [activeCategory, setActiveCategory] = useState(null); // Danh mục đang lọc
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState(null);
 
+  // ── Lấy toàn bộ sản phẩm & danh mục khi khởi động ──────
   useEffect(() => {
-    // Mock API call
-    const fetchProducts = async () => {
+    const init = async () => {
+      setLoading(true);
+      setError(null);
       try {
-        setLoading(true);
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        setProducts(sampleProducts);
+        const [allProducts, allCategories, featuredProducts] = await Promise.all([
+          getAllProducts(),
+          getAllCategories(),
+          getFeaturedProducts(8),
+        ]);
+        setProducts(allProducts);
+        setCategories(allCategories);
+        setFeatured(featuredProducts);
       } catch (err) {
-        setError('Không tải được sản phẩm');
+        setError('Không thể tải dữ liệu. Vui lòng thử lại!');
+        console.error('[ProductContext]', err);
       } finally {
         setLoading(false);
       }
     };
-    fetchProducts();
+    init();
   }, []);
 
+  // ── Lọc sản phẩm theo danh mục ──────────────────────────
+  const filterByCategory = useCallback(async (category) => {
+    setLoading(true);
+    setActiveCategory(category);
+    try {
+      const data = category
+        ? await getProductsByCategory(category)
+        : await getAllProducts();
+      setProducts(data);
+    } catch (err) {
+      setError('Lọc danh mục thất bại!');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // ── Lấy sản phẩm theo ID ────────────────────────────────
+  const fetchProductById = useCallback(async (id) => {
+    try {
+      return await getProductById(id);
+    } catch {
+      return null;
+    }
+  }, []);
+
+  // ── Tìm kiếm sản phẩm (client-side) ─────────────────────
+  const searchProducts = useCallback((keyword) => {
+    if (!keyword.trim()) return products;
+    const lower = keyword.toLowerCase();
+    return products.filter(
+      (p) =>
+        p.name.toLowerCase().includes(lower) ||
+        p.description?.toLowerCase().includes(lower) ||
+        p.category?.toLowerCase().includes(lower)
+    );
+  }, [products]);
+
+  // ── Làm mới toàn bộ ─────────────────────────────────────
+  const refetch = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = activeCategory
+        ? await getProductsByCategory(activeCategory)
+        : await getAllProducts();
+      setProducts(data);
+    } finally {
+      setLoading(false);
+    }
+  }, [activeCategory]);
+
+  const value = {
+    products,
+    featured,
+    categories,
+    activeCategory,
+    loading,
+    error,
+    filterByCategory,
+    fetchProductById,
+    searchProducts,
+    refetch,
+  };
+
   return (
-    <ProductContext.Provider value={{ products, loading, error, refetch: () => setLoading(true) }}>
+    <ProductContext.Provider value={value}>
       {children}
     </ProductContext.Provider>
   );
 };
-
