@@ -69,6 +69,16 @@ export {
   deleteCategory,
 } from "./services/categoryService";
 
+// --- Coupon Service ---
+export {
+  getAllCoupons,
+  getCouponById,
+  addCoupon,
+  updateCoupon,
+  deleteCoupon,
+  toggleCouponStatus,
+} from "./services/couponService";
+
 // --- Review Service ---
 export {
   getReviewsByProduct,

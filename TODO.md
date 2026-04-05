@@ -1,22 +1,21 @@
-# Frontend Development Plan for FoodHub
+# Admin Pages Task - Products List & Coupons
 
-## Progress Tracker
-1. [x] Create contexts: CartContext.js, AuthContext.js
-2. [x] Update src/index.js to wrap App with Context Providers
-3. [ ] Create all page files: Products, ProductDetail, Cart, SignIn, SignUp, MyList, Orders, Search, MyAccount, Contact, About
-2. [ ] Update src/index.js to wrap App with Context Providers
-3. [x] Create all page files: Products, ProductDetail, Cart, SignIn, SignUp, MyList, Orders, Search, MyAccount, Contact, About
-4. [x] Update src/App.js: Add imports, Context wrappers, all Route elements
-5. [x] Enhance src/Pages/Home/Index.js with hero, featured products, animations
-6. [x] Update src/Conponents/Header/Index.js: New nav links, cart badge from context, search redirect
-7. [x] Add animations to src/App.css (keyframes, transitions)
-8. [x] Test all routes, functionality, responsiveness (`npm start`)
-9. [ ] Complete!
+## Steps:
+1. [ ] Create src/Pages/Admin/Products/Index.js - Product list with CRUD (table, add/edit/delete using productService.js)
+2. [ ] Create src/Pages/Admin/Coupons/Index.js - Coupons management (new collection/service needed? Use existing or create)
+3. [ ] Update src/App.js - Add routes /admin/products, /admin/coupons under ProtectedRoute admin
+4. [ ] Update src/Pages/Admin/Index.js - Add sidebar links to Products, Coupons
+5. [ ] Create shared Admin table components if needed
+6. [ ] Test: npm start, login admin, navigate
+7. [ ] Seed sample coupons data if needed
 
-5. [ ] Enhance src/Pages/Home/Index.js with hero, featured products, animations
-6. [ ] Update src/Conponents/Header/Index.js: New nav links, cart badge from context, search redirect
-7. [ ] Add animations to src/App.css (keyframes, transitions)
-8. [ ] Test all routes, functionality, responsiveness (`npm start`)
-9. [ ] Complete!
+✅ Task complete: Added Products & Coupons management in Admin panel.
 
-Current step: 1/9
+- ✅ Backend: couponService.js, Coupon.model.js
+- ✅ Sample data: couponsData.js, updated runSeed.js
+- ✅ UI: CouponManager.js, integrated into Admin sidebar as 'Mã Giảm Giá' tab
+- ✅ Products already available as 'Sản Phẩm' tab
+
+**Next:** Run `npm run seed` to populate coupons data, then test in browser /admin → login admin → Mã Giảm Giá.
+
+No routes needed (tab-based navigation).

@@ -20,9 +20,12 @@ import Search        from './Pages/Search/Index';
 import MyAccount     from './Pages/MyAccount/Index';
 import Contact       from './Pages/Contact/Index';
 import About         from './Pages/About/Index';
+import Admin         from './Pages/Admin/Index';
+import Shipper       from './Pages/Shipper/Index';
 
 // ── Components ─────────────────────────────────────────────
 import Header from './Conponents/Header/Index';
+import ProtectedRoute from './Conponents/ProtectedRoute';
 import Footer from './Conponents/Footer/Index';
 
 // ── Context Providers (kết nối Firebase backend) ───────────
@@ -67,6 +70,15 @@ function App() {
               <Route path="/my-account"  element={<MyAccount />} />
               <Route path="/contact"     element={<Contact />} />
               <Route path="/about"       element={<About />} />
+              
+              {/* --- Routes bảo vệ cho mục Admin và Shipper --- */}
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/admin" element={<Admin />} />
+              </Route>
+              <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>
+                <Route path="/shipper" element={<Shipper />} />
+              </Route>
+
               <Route path="*"            element={<NotFound />} />
             </Routes>
             <Footer />

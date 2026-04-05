@@ -100,7 +100,7 @@ async function seedUsers() {
 // ============================================================
 // 4. SEED ORDERS (tính totalAmount từ products)
 // ============================================================
-async function seedOrders(productIds, productDataArr, userIds) {
+async function seedOrders(productIds, productsData, userIds) {
   log("Đang seed đơn hàng...");
   for (const order of ordersData) {
     const userId   = userIds[order.userIndex];
@@ -108,7 +108,7 @@ async function seedOrders(productIds, productDataArr, userIds) {
 
     // Xây dựng danh sách items với giá thực từ productsData
     const items = order.items.map(({ productIndex, quantity }) => {
-      const p = productDataArr[productIndex];
+    const p = productsData[productIndex];
       const price =
         p.discount > 0
           ? Math.round(p.price * (1 - p.discount / 100))
@@ -190,8 +190,19 @@ async function main() {
     await seedOrders(productIds, productsData, userIds);
     console.log();
 
-    await seedReviews(productIds, userIds);
-    console.log();
+await seedReviews(productIds, userIds);
+  
+  // Seed coupons
+  log("Đang seed mã giảm giá...");
+  for (const coupon of couponsData) {
+    const ref = await addDoc(collection(db, "coupons"), {
+      ...coupon,
+      createdAt: now(),
+      updatedAt: now(),
+    });
+    ok(`Mã giảm giá: ${coupon.code} → ${ref.id}`);
+  }
+  console.log();
 
     console.log("\x1b[32m╔══════════════════════════════════════╗\x1b[0m");
     console.log("\x1b[32m║   ✅ SEED HOÀN THÀNH THÀNH CÔNG!     ║\x1b[0m");

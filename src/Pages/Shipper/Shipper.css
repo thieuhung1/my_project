@@ -1,0 +1,65 @@
+/* Shipper.css */
+.shipper-dashboard {
+  min-height: 80vh;
+  padding-top: 2rem;
+  padding-bottom: 3rem;
+  background-color: #f4f6f8;
+}
+
+.order-card {
+  background: white;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  margin-bottom: 1rem;
+  border-left: 5px solid #ffc107;
+  overflow: hidden;
+  transition: transform 0.2s ease;
+}
+
+.order-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.08);
+}
+
+.order-card.status-delivering { border-left-color: #0d6efd; }
+.order-card.status-delivered { border-left-color: #198754; opacity: 0.8; }
+.order-card.status-failed { border-left-color: #6c757d; }
+
+.order-header {
+  background: #fafafa;
+  padding: 1rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.order-body {
+  padding: 1rem;
+}
+
+.customer-info p {
+  margin-bottom: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.status-badge {
+  padding: 0.35em 0.8em;
+  font-size: 0.8em;
+  border-radius: 20px;
+  font-weight: 600;
+}
+
+.status-badge.confirmed { background-color: #ffc107; color: #000; }
+.status-badge.delivering { background-color: #0d6efd; color: #fff; }
+.status-badge.delivered { background-color: #198754; color: #fff; }
+.status-badge.failed { background-color: #6c757d; color: #fff; }
+
+.order-actions {
+  padding: 1rem;
+  background: #fafafa;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
