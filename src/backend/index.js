@@ -18,7 +18,6 @@ export {
   resetPassword,
   onAuthStateChange,
   getCurrentUser,
-  getAuthRedirectResult,
 } from "./services/authService";
 
 // --- Product Service ---
@@ -39,6 +38,8 @@ export {
   getOrdersByUser,
   getAllOrders,
   updateOrderStatus,
+  getOrdersByShipper,
+  assignOrderToShipper,
 } from "./services/orderService";
 
 // --- User Service ---
@@ -48,6 +49,7 @@ export {
   updateUserProfile,
   getAllUsers,
   updateUserRole,
+  getUsersByRole,
 } from "./services/userService";
 
 // --- Storage Service ---

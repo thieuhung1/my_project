@@ -9,6 +9,8 @@ import {
   updateDoc,
   collection,
   getDocs,
+  query,
+  where,
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
@@ -58,4 +60,14 @@ export const updateUserRole = async (userId, role) => {
     role,
     updatedAt: serverTimestamp(),
   });
+};
+
+// ---- Lấy người dùng theo vai trò ----
+export const getUsersByRole = async (role) => {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where("role", "==", role)
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 };

@@ -68,3 +68,25 @@ export const updateOrderStatus = async (orderId, status) => {
     updatedAt: serverTimestamp(),
   });
 };
+
+// ---- Lấy đơn hàng theo Shipper ----
+export const getOrdersByShipper = async (shipperId) => {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where("shipperId", "==", shipperId),
+    orderBy("createdAt", "desc")
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+// ---- Phân công Shipper cho đơn hàng ----
+export const assignOrderToShipper = async (orderId, shipperId, shipperName) => {
+  const docRef = doc(db, COLLECTION_NAME, orderId);
+  await updateDoc(docRef, {
+    shipperId,
+    shipperName: shipperName || '',
+    status: "confirmed",
+    updatedAt: serverTimestamp(),
+  });
+};

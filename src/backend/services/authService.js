@@ -1,5 +1,5 @@
 // ============================================================
-// authService.js - Dịch vụ xác thực người dùng (Firebase Auth)
+// authService.js - Dá»‹ch vá»¥ xĂ¡c thá»±c ngÆ°á»i dĂ¹ng (Firebase Auth)
 // ============================================================
 
 import {
@@ -10,25 +10,24 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
 
-// ---- Đăng ký tài khoản mới bằng email & mật khẩu ----
+// ---- ÄÄƒng kĂ½ tĂ i khoáº£n má»›i báº±ng email & máº­t kháº©u ----
 export const registerWithEmail = async (email, password, displayName) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  // Cập nhật tên hiển thị sau khi đăng ký
+  // Cáº­p nháº­t tĂªn hiá»ƒn thá»‹ sau khi Ä‘Äƒng kĂ½
   await updateProfile(userCredential.user, { displayName });
   return userCredential.user;
 };
 
-// ---- Đăng nhập bằng email & mật khẩu (có tuỳ chọn ghi nhớ) ----
+// ---- ÄÄƒng nháº­p báº±ng email & máº­t kháº©u (cĂ³ tuá»³ chá»n ghi nhá»›) ----
 export const loginWithEmail = async (email, password, remember = true) => {
-  // Thiết lập mức độ ghi nhớ phiên bản đăng nhập
+  // Thiáº¿t láº­p má»©c Ä‘á»™ ghi nhá»› phiĂªn báº£n Ä‘Äƒng nháº­p
   const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
   await setPersistence(auth, persistence);
   
@@ -36,40 +35,30 @@ export const loginWithEmail = async (email, password, remember = true) => {
   return userCredential.user;
 };
 
-// ---- Đăng nhập bằng tài khoản Google (Redirect) ----
+// ---- ÄÄƒng nháº­p báº±ng tĂ i khoáº£n Google (Popup) ----
 export const loginWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  // Chuyển sang Redirect để tránh lỗi Cross-Origin-Opener-Policy trên một số trình duyệt
-  await signInWithRedirect(auth, provider);
+  const userCredential = await signInWithPopup(auth, provider);
+  return userCredential.user;
 };
 
-// ---- Lấy kết quả sau khi Redirect ----
-export const getAuthRedirectResult = async () => {
-  try {
-    const result = await getRedirectResult(auth);
-    return result?.user || null;
-  } catch (error) {
-    console.error("Lỗi khi lấy kết quả Redirect:", error);
-    throw error;
-  }
-};
-
-// ---- Đăng xuất ----
+// ---- ÄÄƒng xuáº¥t ----
 export const logout = async () => {
   await signOut(auth);
 };
 
-// ---- Gửi email đặt lại mật khẩu ----
+// ---- Gá»­i email Ä‘áº·t láº¡i máº­t kháº©u ----
 export const resetPassword = async (email) => {
   await sendPasswordResetEmail(auth, email);
 };
 
-// ---- Lắng nghe trạng thái đăng nhập của người dùng ----
+// ---- Láº¯ng nghe tráº¡ng thĂ¡i Ä‘Äƒng nháº­p cá»§a ngÆ°á»i dĂ¹ng ----
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
 
-// ---- Lấy người dùng hiện tại ----
+// ---- Láº¥y ngÆ°á»i dĂ¹ng hiá»‡n táº¡i ----
 export const getCurrentUser = () => {
   return auth.currentUser;
 };
+
