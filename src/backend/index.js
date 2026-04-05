@@ -18,6 +18,7 @@ export {
   resetPassword,
   onAuthStateChange,
   getCurrentUser,
+  getAuthRedirectResult,
 } from "./services/authService";
 
 // --- Product Service ---

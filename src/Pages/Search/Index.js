@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
@@ -6,44 +6,63 @@ import { useCart } from '../../contexts/CartContext';
 const Search = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
+  const { products } = useProducts();
+  const { dispatch } = useCart();
   const [results, setResults] = useState([]);
-  const { products, dispatch } = useCart();
 
   useEffect(() => {
-    if (query) {
-      const filtered = products.filter(p => 
-        p.name.toLowerCase().includes(query.toLowerCase()) || 
-        p.description.toLowerCase().includes(query.toLowerCase())
-      );
-      setResults(filtered);
-    }
+    const q = query.trim().toLowerCase();
+    if (!q) { setResults([]); return; }
+    const filtered = products.filter(p =>
+      p.name.toLowerCase().includes(q) ||
+      (p.description || '').toLowerCase().includes(q)
+    );
+    setResults(filtered);
   }, [query, products]);
+
+  const title = useMemo(() => `Kết quả tìm kiếm: "${query}"`, [query]);
 
   return (
     <div className="container my-5 animate__animated animate__fadeIn">
-      <h1>Káº¿t Quáº£ TĂ¬m Kiáº¿m: "{query}"</h1>
+      <h1 className="fw-bold mb-3">{title}</h1>
       {results.length === 0 ? (
-        <p>KhĂ´ng tĂ¬m tháº¥y sáº£n pháº©m nĂ o.</p>
+        <div className="text-center text-muted py-5">
+          <div className="display-6 mb-2">🔍</div>
+          Không tìm thấy sản phẩm nào.
+          <div className="mt-3"><Link to="/products" className="btn btn-warning">Xem thực đơn</Link></div>
+        </div>
       ) : (
-        <div className="row">
+        <div className="row g-4">
           {results.map(product => (
-            <div key={product.id} className="col-md-4 mb-4">
-              <div className="card product-card shadow-sm h-100">
-                <img src={product.image} className="card-img-top product-card__image" alt={product.name} loading="lazy" />
-                <div className="card-body product-card__body">
-                  <h5>{product.name}</h5>
-                  <p>{product.price.toLocaleString()} VNÄ</p>
-                  <button className="btn btn-success me-2" onClick={() => dispatch({type: 'ADD_TO_CART', payload: product})}>Giá» HĂ ng</button>
-                  <Link to={`/product/${product.id}`} className="btn btn-warning">Chi Tiáº¿t</Link>
+            <div key={product.id} className="col-md-4">
+              <div className="card product-card shadow-sm h-100 border-0 hover-lift">
+                <img
+                  src={product.imageUrl || product.image || '/ASSETS/Images/placeholder.jpg'}
+                  className="card-img-top product-card__image"
+                  alt={product.name}
+                  loading="lazy"
+                  style={{height:220, objectFit:'cover'}}
+                  onError={(e)=>{e.currentTarget.src='/ASSETS/Images/placeholder.jpg'}}
+                />
+                <div className="card-body product-card__body d-flex flex-column">
+                  <h5 className="fw-bold text-truncate" title={product.name}>{product.name}</h5>
+                  <p className="text-muted mb-3">{product.price.toLocaleString('vi-VN')} VNĐ</p>
+                  <div className="mt-auto d-flex gap-2">
+                    <button className="btn btn-success btn-sm" onClick={() => dispatch({type: 'ADD_TO_CART', payload: product})}>
+                      <i className="bi bi-cart-plus me-1" /> Giỏ hàng
+                    </button>
+                    <Link to={`/product/${product.id}`} className="btn btn-warning btn-sm">
+                      <i className="bi bi-eye me-1" /> Chi tiết
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
           ))}
         </div>
-      )}
+      )}    
     </div>
   );
-};
+};      
 
 export default Search;
-

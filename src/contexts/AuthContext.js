@@ -14,6 +14,7 @@ import {
   createUserProfile,
   getUserProfile,
   updateUserProfile,
+  getAuthRedirectResult,
 } from '../backend';
 
 const AuthContext = createContext();
@@ -28,6 +29,35 @@ export const AuthProvider = ({ children }) => {
 
   // ── Lắng nghe trạng thái đăng nhập từ Firebase ──────────
   useEffect(() => {
+    // 1. Kiểm tra kết quả từ Redirect (Google Login)
+    const checkRedirect = async () => {
+      try {
+        const redirectUser = await getAuthRedirectResult();
+        if (redirectUser) {
+          console.log("Đăng nhập thành công từ Redirect:", redirectUser.email);
+          
+          // Tự động tạo profile nếu chưa có
+          try {
+            await getUserProfile(redirectUser.uid);
+          } catch {
+            await createUserProfile(redirectUser.uid, {
+              displayName: redirectUser.displayName || 'Thành viên',
+              email: redirectUser.email,
+              phone: redirectUser.phoneNumber || '',
+              photoURL: redirectUser.photoURL || '',
+              address: '',
+              role: 'customer',
+            });
+            console.log("Đã tạo profile Firestore cho người dùng Redirect mới.");
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi Redirect Auth:", error);
+      }
+    };
+    checkRedirect();
+
+    // 2. Lắng nghe thay đổi trạng thái Auth
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
         setUser(firebaseUser);
@@ -54,35 +84,22 @@ export const AuthProvider = ({ children }) => {
       displayName,
       email,
       phone: '',
-      avatarUrl: '',
+      photoURL: '',
+      address: '',
       role: 'customer',
-      addresses: [],
     });
     return newUser;
   };
 
   // ── Đăng nhập bằng email ─────────────────────────────────
-  const signIn = async (email, password) => {
-    return await loginWithEmail(email, password);
+  const signIn = async (email, password, options = {}) => {
+    const { remember = true } = options;
+    return await loginWithEmail(email, password, remember);
   };
 
   // ── Đăng nhập bằng Google ────────────────────────────────
   const signInWithGoogle = async () => {
-    const googleUser = await loginWithGoogle();
-    // Tự động tạo profile nếu chưa có
-    try {
-      await getUserProfile(googleUser.uid);
-    } catch {
-      await createUserProfile(googleUser.uid, {
-        displayName: googleUser.displayName,
-        email: googleUser.email,
-        phone: '',
-        avatarUrl: googleUser.photoURL || '',
-        role: 'customer',
-        addresses: [],
-      });
-    }
-    return googleUser;
+    await loginWithGoogle();
   };
 
   // ── Đăng xuất ────────────────────────────────────────────
@@ -98,10 +115,24 @@ export const AuthProvider = ({ children }) => {
   // ── Cập nhật thông tin hồ sơ người dùng ─────────────
   const updateUser = async (updatedData) => {
     if (!user) return;
+    
+    // 1. Cập nhật Firestore
     await updateUserProfile(user.uid, updatedData);
-    // Cập nhật lại local state
+    
+    // 2. Đồng bộ với Firebase Auth Profile (nếu có đổi tên hoặc ảnh)
+    const { displayName, photoURL } = updatedData;
+    if (displayName || photoURL) {
+      const { updateProfile } = await import('firebase/auth');
+      await updateProfile(user, { 
+        displayName: displayName || user.displayName, 
+        photoURL: photoURL || user.photoURL 
+      });
+    }
+
+    // 3. Cập nhật lại local state
     const newProfile = await getUserProfile(user.uid);
     setUserProfile(newProfile);
+    setUser({ ...user }); // Kích hoạt re-render để cập nhật auth user object
   };
 
   const isAdmin = userProfile?.role === 'admin';

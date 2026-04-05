@@ -10,7 +10,11 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  setPersistence,
+  browserLocalPersistence,
+  browserSessionPersistence,
 } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
 
@@ -22,17 +26,32 @@ export const registerWithEmail = async (email, password, displayName) => {
   return userCredential.user;
 };
 
-// ---- Đăng nhập bằng email & mật khẩu ----
-export const loginWithEmail = async (email, password) => {
+// ---- Đăng nhập bằng email & mật khẩu (có tuỳ chọn ghi nhớ) ----
+export const loginWithEmail = async (email, password, remember = true) => {
+  // Thiết lập mức độ ghi nhớ phiên bản đăng nhập
+  const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
+  await setPersistence(auth, persistence);
+  
   const userCredential = await signInWithEmailAndPassword(auth, email, password);
   return userCredential.user;
 };
 
-// ---- Đăng nhập bằng tài khoản Google ----
+// ---- Đăng nhập bằng tài khoản Google (Redirect) ----
 export const loginWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  const userCredential = await signInWithPopup(auth, provider);
-  return userCredential.user;
+  // Chuyển sang Redirect để tránh lỗi Cross-Origin-Opener-Policy trên một số trình duyệt
+  await signInWithRedirect(auth, provider);
+};
+
+// ---- Lấy kết quả sau khi Redirect ----
+export const getAuthRedirectResult = async () => {
+  try {
+    const result = await getRedirectResult(auth);
+    return result?.user || null;
+  } catch (error) {
+    console.error("Lỗi khi lấy kết quả Redirect:", error);
+    throw error;
+  }
 };
 
 // ---- Đăng xuất ----
