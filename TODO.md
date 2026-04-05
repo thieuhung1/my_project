@@ -1,22 +1,40 @@
-# Frontend Development Plan for FoodHub
+# Clean Code & Optimization TODO
+Status: In progress
 
-## Progress Tracker
-1. [x] Create contexts: CartContext.js, AuthContext.js
-2. [x] Update src/index.js to wrap App with Context Providers
-3. [ ] Create all page files: Products, ProductDetail, Cart, SignIn, SignUp, MyList, Orders, Search, MyAccount, Contact, About
-2. [ ] Update src/index.js to wrap App with Context Providers
-3. [x] Create all page files: Products, ProductDetail, Cart, SignIn, SignUp, MyList, Orders, Search, MyAccount, Contact, About
-4. [x] Update src/App.js: Add imports, Context wrappers, all Route elements
-5. [x] Enhance src/Pages/Home/Index.js with hero, featured products, animations
-6. [x] Update src/Conponents/Header/Index.js: New nav links, cart badge from context, search redirect
-7. [x] Add animations to src/App.css (keyframes, transitions)
-8. [x] Test all routes, functionality, responsiveness (`npm start`)
-9. [ ] Complete!
+## 1. [x] Structure Fixes
+   - Rename src/Conponents → src/components (Header/Footer)
+   - [x] Fill src/components/LoadingSpinner.js
+   - Rename src/Model → src/models (lowercase)
 
-5. [ ] Enhance src/Pages/Home/Index.js with hero, featured products, animations
-6. [ ] Update src/Conponents/Header/Index.js: New nav links, cart badge from context, search redirect
-7. [ ] Add animations to src/App.css (keyframes, transitions)
-8. [ ] Test all routes, functionality, responsiveness (`npm start`)
-9. [ ] Complete!
+## 2. [x] Remove Console Logs
 
-Current step: 1/9
+   - src/Config/DB.js
+   - src/contexts/ProductContext.js
+
+## 3. [ ] App.js Optimizations
+   - Lazy load routes + Suspense
+   - Fix duplicate paths
+   - Update imports post-rename
+
+## 4. [ ] Contexts Enhancements
+   - useMemo, useCallback
+   - Error handling improvements
+
+## 5. [ ] Package.json & Config
+   - Clean deps (pure Vite)
+   - ESLint/Prettier setup
+
+## 6. [ ] Pages Fixes
+   - Fix typos (Home.js etc.)
+   - Add LoadingSpinner usage
+   - Lazy imgs, memo
+
+## 7. [ ] New Components
+   - src/utils/constants.js
+   - src/components/ErrorBoundary.js
+
+## 8. [ ] Test & Verify
+   - npm run dev
+   - Check performance/linting
+
+Next: Start with 1-2.
