@@ -138,9 +138,21 @@ export default function CategoryManager() {
                 <input required type="text" className="form-control" name="slug" value={formData.slug} onChange={handleInputChange} placeholder="VD: do-uong" />
               </div>
 
-              <div className="col-md-2">
+              <div className="col-md-3">
                 <label className="form-label fw-semibold">Icon / Emoji</label>
                 <input type="text" className="form-control" name="icon" value={formData.icon} onChange={handleInputChange} placeholder="🧋" />
+                <div className="mt-2 d-flex flex-wrap gap-1">
+                  {['🍜','🍚','🥖','🥟','🍲','🧋','🍮','🍱','🍵','🥢'].map(ic => (
+                    <span 
+                      key={ic} 
+                      style={{cursor: 'pointer', fontSize: '1.2rem', padding: '2px'}} 
+                      onClick={() => setFormData({...formData, icon: ic})}
+                      title="Chọn icon"
+                    >
+                      {ic}
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div className="col-md-2">

@@ -7,6 +7,7 @@ import OrderManager from './OrderManager';
 import UserManager from './UserManager';
 import CouponManager from './CouponManager';
 import CategoryManager from './CategoryManager';
+import SupportChatManager from './SupportChatManager';
 import './Admin.css';
 
 export default function Admin() {
@@ -26,7 +27,9 @@ export default function Admin() {
       case 'Đơn Hàng': return <OrderManager />;
       case 'Người Dùng': return <UserManager />;
       case 'Danh Mục': return <CategoryManager />;
-      case 'Mã Giảm Giá': return <CouponManager />;
+case 'Mã Giảm Giá': return <CouponManager />;
+      case 'Hỗ Trợ': return <SupportChatManager />;
+
       default: return <DashboardCharts />;
     }
   };
@@ -39,6 +42,7 @@ export default function Admin() {
     { id: 'Đơn Hàng', icon: 'bi-receipt', label: 'Đơn Hàng' },
     { id: 'Người Dùng', icon: 'bi-people', label: 'Tài Khoản' },
     { id: 'Mã Giảm Giá', icon: 'bi-tag-fill', label: 'Mã Giảm Giá' },
+    { id: 'Hỗ Trợ', icon: 'bi-chat-left-dots-fill', label: 'Hỗ Trợ Chat' },
   ];
 
   return (

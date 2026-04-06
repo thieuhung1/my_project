@@ -32,12 +32,12 @@ export const createCategoryModel = (overrides = {}) => ({
 
 // Danh mục mặc định cho ứng dụng Food Hub
 export const DEFAULT_CATEGORIES = [
-  { name: "Burger",  slug: "burger",  icon: "🍔", order: 1 },
-  { name: "Pizza",   slug: "pizza",   icon: "🍕", order: 2 },
-  { name: "Sushi",   slug: "sushi",   icon: "🍣", order: 3 },
-  { name: "Pasta",   slug: "pasta",   icon: "🍝", order: 4 },
-  { name: "Salad",   slug: "salad",   icon: "🥗", order: 5 },
-  { name: "Đồ uống", slug: "drink",   icon: "🧋", order: 6 },
-  { name: "Tráng miệng", slug: "dessert", icon: "🍰", order: 7 },
-  { name: "Khác",    slug: "other",   icon: "🍱", order: 8 },
+  { name: "Phở & Bún",      slug: "pho-bun",       icon: "🍜", order: 1 },
+  { name: "Cơm Phần",       slug: "com-phan",      icon: "🍚", order: 2 },
+  { name: "Bánh Mì",        slug: "banh-mi",       icon: "🥖", order: 3 },
+  { name: "Đồ Ăn Vặt",      slug: "do-an-vat",     icon: "🥟", order: 4 },
+  { name: "Lẩu & Nướng",    slug: "lau-nuong",     icon: "🍲", order: 5 },
+  { name: "Đồ Uống",        slug: "do-uong",       icon: "🥤", order: 6 },
+  { name: "Tráng Miệng",    slug: "trang-mieng",   icon: "🍮", order: 7 },
+  { name: "Khác",           slug: "other",         icon: "🍱", order: 8 },
 ];

@@ -19,6 +19,9 @@ import { db } from "../firebase/firebaseConfig";
 // Tên collection đơn hàng trong Firestore
 const COLLECTION_NAME = "orders";
 
+// Schema note: now supports couponId, couponCode, discountAmount, subtotal
+
+
 // ---- Tạo đơn hàng mới ----
 export const createOrder = async (orderData) => {
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {

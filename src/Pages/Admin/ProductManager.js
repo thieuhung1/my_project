@@ -4,11 +4,12 @@ import {
   addProduct,
   updateProduct,
   deleteProduct,
-  PRODUCT_CATEGORIES
+  getAllCategories
 } from '../../backend';
 
 export default function ProductManager() {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
 
@@ -29,11 +30,15 @@ export default function ProductManager() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const data = await getAllProducts();
-      setProducts(data);
+      const [prodData, catData] = await Promise.all([
+        getAllProducts(),
+        getAllCategories()
+      ]);
+      setProducts(prodData);
+      setCategories(catData);
     } catch (err) {
       console.error(err);
-      alert("Lỗi tải sản phẩm.");
+      alert("Lỗi tải dữ liệu sản phẩm hoặc danh mục.");
     } finally {
       setLoading(false);
     }
@@ -135,7 +140,7 @@ export default function ProductManager() {
                 <div className="col-md-6">
                   <label className="form-label">Danh mục</label>
                   <select className="form-select" name="category" value={formData.category} onChange={handleInputChange}>
-                    {PRODUCT_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    {categories.length > 0 ? categories.map(c => <option key={c.slug} value={c.slug}>{c.name}</option>) : <option value="other">Khác</option>}
                   </select>
                 </div>
                 <div className="col-md-3">
@@ -200,7 +205,9 @@ export default function ProductManager() {
                       <span className="fw-semibold">{p.name}</span>
                       {p.featured && <span className="badge bg-warning ms-2">Nổi bật</span>}
                     </td>
-                    <td><span className="badge bg-secondary">{p.category}</span></td>
+                    <td><span className="badge bg-secondary">
+                      {categories.find(c => c.slug === p.category)?.name || p.category}
+                    </span></td>
                     <td>
                       {p.discount > 0 ? (
                         <>

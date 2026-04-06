@@ -65,7 +65,7 @@ const Header = () => {
             <li className="nav-item"><NavLink className={navLinkClass} to="/">Trang Chủ</NavLink></li>
             <li className="nav-item"><NavLink className={navLinkClass} to="/products">Sản Phẩm</NavLink></li>
             <li className="nav-item"><NavLink className={navLinkClass} to="/orders">Đơn Hàng</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/my-account">Tài Khoản</NavLink></li>
+            <li className="nav-item"><NavLink className={navLinkClass} to="/about">Giới Thiệu</NavLink></li>
             <li className="nav-item"><NavLink className={navLinkClass} to="/contact">Liên Hệ</NavLink></li>
           </ul>
 

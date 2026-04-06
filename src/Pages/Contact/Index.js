@@ -1,12 +1,40 @@
 import React, { useState } from 'react';
+import { sendSupportMessage } from '../../backend/services/supportChatService';
+import useAuth from '../../backend/hooks/useAuth';
+import { serverTimestamp } from 'firebase/database';
 
 const Contact = () => {
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
 
-  const onSubmit = (e) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+
+  const chatId = user ? user.uid : 'anon-' + (localStorage.getItem('anon_chat_id') || Math.random().toString(36).substring(7));
+
+  const onSubmit = async (e) => {
     e.preventDefault();
-    // TODO: gửi form lên backend
-    setSent(true);
+    setLoading(true);
+    
+    try {
+      await sendSupportMessage(chatId, {
+        text: `[Liên hệ từ Form] Họ tên: ${formData.name}\nEmail: ${formData.email}\nNội dung: ${formData.message}`,
+        userId: user?.uid || chatId,
+        userName: formData.name || user?.displayName || 'Khách',
+        direction: 'user',
+        timestamp: serverTimestamp()
+      });
+      setSent(true);
+      setFormData({ name: '', email: '', message: '' });
+    } catch (err) {
+      alert('Gửi liên hệ thất bại: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,19 +53,42 @@ const Contact = () => {
                 <div className="row g-3">
                   <div className="col-md-6">
                     <label className="form-label fw-semibold">Họ tên</label>
-                    <input type="text" className="form-control" required />
+                    <input 
+                      type="text" 
+                      className="form-control" 
+                      required 
+                      value={formData.name}
+                      onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    />
                   </div>
                   <div className="col-md-6">
                     <label className="form-label fw-semibold">Email</label>
-                    <input type="email" className="form-control" required />
+                    <input 
+                      type="email" 
+                      className="form-control" 
+                      required 
+                      value={formData.email}
+                      onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    />
                   </div>
                   <div className="col-12">
                     <label className="form-label fw-semibold">Tin nhắn</label>
-                    <textarea className="form-control" rows="5" required />
+                    <textarea 
+                      className="form-control" 
+                      rows="5" 
+                      required 
+                      value={formData.message}
+                      onChange={(e) => setFormData({...formData, message: e.target.value})}
+                    />
                   </div>
                 </div>
-                <button type="submit" className="btn btn-warning mt-3">
-                  <i className="bi bi-send me-1" /> Gửi
+                <button type="submit" className="btn btn-warning mt-3" disabled={loading}>
+                  {loading ? (
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                  ) : (
+                    <i className="bi bi-send me-1" />
+                  )}
+                  Gửi
                 </button>
               </form>
             </div>

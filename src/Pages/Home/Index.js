@@ -1,7 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import useAuth from '../../backend/hooks/useAuth';
+import { subscribeToMessages, sendSupportMessage } from '../../backend/services/supportChatService';
+import { serverTimestamp } from 'firebase/database';
+
 
 const currency = (n) =>
   typeof n === 'number' ? n.toLocaleString('vi-VN') + ' VNĐ' : n;
@@ -33,7 +36,65 @@ const SkeletonCard = () => (
 
 const Home = () => {
   const { products, loading } = useProducts();
+  const { user } = useAuth();
   const featured = Array.isArray(products) ? products.slice(0, 6) : [];
+
+  // Chat states
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const messagesEndRef = useRef(null);
+  
+  // Use user UID or a unique anonymous ID (could be stored in localStorage)
+  const chatId = user ? user.uid : 'anon-' + (localStorage.getItem('anon_chat_id') || Math.random().toString(36).substring(7));
+  
+  if (!user && !localStorage.getItem('anon_chat_id')) {
+    localStorage.setItem('anon_chat_id', chatId.replace('anon-', ''));
+  }
+
+  // Chat logic
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToMessages(chatId, (data) => {
+      const sortedMsgs = data.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      setMessages(sortedMsgs);
+    });
+    return () => unsubscribe();
+  }, [chatId]);
+
+  const sendMessage = async () => {
+    const text = input.trim();
+    if (!text) return;
+    setInput('');
+    try {
+      await sendSupportMessage(chatId, {
+        text,
+        userId: user?.uid || chatId,
+        userName: user?.displayName || user?.email?.split('@')[0] || 'Khách',
+        direction: 'user', // Explicitly marked as user
+        timestamp: serverTimestamp()
+      });
+    } catch (err) {
+      setInput(text);
+      alert('Gửi thất bại: ' + err.message);
+    }
+  };
+
+  const toggleChat = () => setChatOpen(prev => !prev);
+
+  const quickReplies = [
+    { label: 'Đặt hàng', msg: 'Tôi muốn đặt món ăn, tư vấn giúp?' },
+    { label: 'Theo dõi đơn', msg: 'Kiểm tra đơn hàng của tôi' },
+    { label: 'Khuyến mãi', msg: 'Có ưu đãi gì hôm nay?' },
+    { label: 'Admin', msg: 'Liên hệ Admin hỗ trợ' }
+  ];
 
   return (
     <>
@@ -287,6 +348,87 @@ const Home = () => {
           ))}
         </div>
       </div>
+
+{/* Floating Support Chat - Ẩn khi mở */}
+      {!chatOpen && (
+        <button
+          className="position-fixed bottom-0 end-0 m-4 btn btn-success rounded-circle p-3 shadow-lg border-0 d-flex align-items-center justify-content-center"
+          style={{
+            width: '60px',
+            height: '60px',
+            zIndex: 9999,
+            background: 'linear-gradient(135deg, #25d366, #128c7e)',
+            boxShadow: '0 4px 20px rgba(37, 211, 102, 0.4)'
+          }}
+          onClick={toggleChat}
+          title="Nhắn tin hỗ trợ"
+        >
+          <i className="bi bi-chat-dots-fill text-white fs-4" />
+        </button>
+      )}
+
+      {/* Chat Panel */}
+      {chatOpen && (
+        <div
+          className="position-fixed bottom-0 end-0 m-4 bg-white rounded-3 shadow-xl border-0 overflow-hidden d-flex flex-column"
+          style={{
+            width: '360px',
+            height: '500px',
+            maxWidth: '90vw',
+            maxHeight: '80vh',
+            zIndex: 9998,
+            right: 0,
+            bottom: 0
+          }}
+        >
+          <div className="bg-success bg-opacity-90 text-white p-3 position-relative">
+            <i className="bi bi-headset me-2" />
+            <strong>Hỗ trợ & ChatBot</strong>
+            <button className="btn-close btn-close-white position-absolute top-2 end-2" onClick={toggleChat} />
+          </div>
+          <div className="flex-grow-1 p-3 overflow-auto" style={{ backgroundColor: '#f8f9fa' }}>
+            {messages.length === 0 ? (
+              // ... (quick replies part)
+              <div className="text-center py-5">
+                <i className="bi bi-chat-square-quote fs-1 text-muted mb-3" />
+                <p className="text-muted mb-4">Chào! Chọn câu hỏi nhanh hoặc gõ tin nhắn</p>
+                <div className="d-grid gap-2">
+                  {quickReplies.map((r, i) => (
+                    <button key={i} className="btn btn-outline-secondary btn-sm" onClick={() => setInput(r.msg)}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              messages.map((msg, i) => (
+                <div key={msg.id || i} className={`mb-2 ${msg.direction === 'user' ? 'text-end' : ''}`}>
+                  <div className={`d-inline-block p-2 rounded-pill shadow-sm ${msg.direction === 'user' ? 'bg-success text-white' : 'bg-light'}`}>
+                    {msg.text}
+                  </div>
+                  <small className="d-block text-muted">{msg.direction === 'user' ? 'Bạn' : 'Hỗ trợ'}</small>
+                </div>
+              ))
+            )}
+            <div ref={messagesEndRef} />
+          </div>
+          <div className="p-2 border-top">
+            <div className="input-group">
+              <input
+                className="form-control"
+                placeholder="Gõ tin nhắn (Enter gửi)..."
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                onKeyPress={e => e.key === 'Enter' && sendMessage()}
+              />
+              <button className="btn btn-success" onClick={sendMessage}>
+                Gửi
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };

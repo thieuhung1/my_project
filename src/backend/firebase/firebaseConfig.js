@@ -7,6 +7,7 @@ import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getDatabase } from "firebase/database"; // Realtime Database
 
 
 // Cấu hình Firebase từ Firebase Console
@@ -18,6 +19,7 @@ const firebaseConfig = {
   messagingSenderId: "158553211792",
   appId: "1:158553211792:web:35746edd053c3c22eca915",
   measurementId: "G-D0N58NRV0J",
+  databaseURL: "https://do-an-food-hub-default-rtdb.asia-southeast1.firebasedatabase.app",
 };
 
 // Khởi tạo Firebase App
@@ -28,5 +30,6 @@ const analytics = getAnalytics(app);  // Google Analytics
 const auth = getAuth(app);            // Authentication
 const db = getFirestore(app);         // Firestore Database
 const storage = getStorage(app);      // Cloud Storage
+const rtdb = getDatabase(app, firebaseConfig.databaseURL); // Realtime Database
 
-export { app, analytics, auth, db, storage };
+export { app, analytics, auth, db, storage, rtdb };

@@ -1,13 +1,31 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
+import { useState } from 'react';
 
-const fmt = n => (typeof n === 'number' ? n.toLocaleString('vi-VN') + ' VNĐ' : n);
+
 
 const Cart = () => {
-  const { cart, dispatch } = useCart();
+  const fmt = n => (typeof n === 'number' ? n.toLocaleString('vi-VN') + ' VNĐ' : n);
+  const [couponError, setCouponError] = useState('');
+
+  const handleApplyCoupon = async () => {
+    const code = document.getElementById('couponCode').value.trim().toUpperCase();
+    if (!code) return;
+    
+    try {
+      setCouponError('');
+      await applyCoupon(code);
+    } catch (error) {
+      setCouponError(error.message);
+    }
+  };
+
+
+
+  const { cart, dispatch, subtotal, appliedCoupon, applyCoupon, clearCoupon, finalTotal } = useCart();
   const navigate = useNavigate();
-  const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+
 
   if (cart.length === 0) {
     return (
@@ -90,23 +108,56 @@ const Cart = () => {
         <div className="col-md-5">
           <div className="card border-0 shadow-sm">
             <div className="card-body">
+              {/* Coupon Input */}
+              <div className="mb-3">
+                <div className="input-group">
+                  <input 
+                    type="text" 
+                    className="form-control" 
+                    placeholder="Nhập mã giảm giá"
+                    id="couponCode"
+                  />
+                  <button className="btn btn-outline-warning" type="button" onClick={handleApplyCoupon}>
+                    Áp dụng
+                  </button>
+                </div>
+                {couponError && <div className="alert alert-danger py-1 mt-1 small">{couponError}</div>}
+                {appliedCoupon && (
+                  <div className="alert alert-success py-1 mt-1 small d-flex justify-content-between align-items-center">
+                    <span>✅ {appliedCoupon.code}: -{fmt(appliedCoupon.discountAmount)}</span>
+                    <button className="btn btn-sm btn-link p-0 text-decoration-none" onClick={clearCoupon}>
+                      <i className="bi bi-x" />
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Tạm tính</span>
-                <span className="fw-semibold">{fmt(total)}</span>
+                <span className="fw-semibold">{fmt(subtotal)}</span>
               </div>
+              
+              {appliedCoupon && (
+                <div className="d-flex justify-content-between mb-2 text-success fw-semibold">
+                  <span>Giảm giá</span>
+                  <span>-{fmt(appliedCoupon.discountAmount)}</span>
+                </div>
+              )}
+              
               <div className="d-flex justify-content-between mb-3">
                 <span className="text-muted">Phí ship</span>
                 <span className="fw-semibold text-success">Miễn phí</span>
               </div>
               <hr />
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <span className="fw-bold">Tổng cộng</span>
-                <span className="h4 m-0 text-danger">{fmt(total)}</span>
+                <span className="fw-bold h5 mb-0">Tổng thanh toán</span>
+                <span className="h4 m-0 text-danger fw-bold">{fmt(finalTotal)}</span>
               </div>
               <button className="btn btn-success btn-lg w-100 shadow-sm" onClick={()=>navigate('/orders')}>
-                <i className="bi bi-credit-card me-2" /> Thanh toán
+                <i className="bi bi-credit-card me-2" /> Thanh toán ({fmt(finalTotal)})
               </button>
-              <Link to="/products" className="btn btn-link w-100 mt-2">Tiếp tục mua sắm</Link>
+              <Link to="/products" className="btn btn-link w-100 mt-2">← Tiếp tục mua sắm</Link>
+
             </div>
           </div>
         </div>

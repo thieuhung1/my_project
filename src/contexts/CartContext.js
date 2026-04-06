@@ -3,7 +3,10 @@
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { createOrder } from '../backend';
+import { createOrder } from '../backend/services/orderService';
+import { getCouponByCode } from '../backend/services/couponService';
+import { useState } from 'react';
+
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
@@ -50,6 +53,32 @@ export const useCart = () => useContext(CartContext);
 
 export const CartProvider = ({ children }) => {
   const { user, userProfile } = useAuth();
+  const [appliedCoupon, setAppliedCoupon] = useState(null);
+  
+  // ── Apply coupon function ───────────────────────────────
+  const applyCoupon = async (code) => {
+    try {
+      const coupon = await getCouponByCode(code);
+      if (coupon.minOrderValue > 0 && subtotal < coupon.minOrderValue) {
+        throw new Error(`Đơn hàng tối thiểu ${coupon.minOrderValue.toLocaleString('vi-VN')}đ để áp dụng mã này!`);
+      }
+      let discountAmount;
+      if (coupon.discountType === 'percent') {
+        discountAmount = Math.round(subtotal * (coupon.discountValue / 100));
+      } else {
+        discountAmount = coupon.discountValue;
+      }
+      // Cap discount at subtotal
+      discountAmount = Math.min(discountAmount, subtotal);
+      coupon.discountAmount = discountAmount;
+      setAppliedCoupon(coupon);
+    } catch (error) {
+      throw new Error(error.message);
+    }
+  };
+
+  const clearCoupon = () => setAppliedCoupon(null);
+
 
   // Khởi tạo giỏ hàng từ localStorage (tránh mất khi reload)
   const [cart, dispatch] = useReducer(cartReducer, [], () => {
@@ -66,12 +95,13 @@ export const CartProvider = ({ children }) => {
     localStorage.setItem(CART_KEY, JSON.stringify(cart));
   }, [cart]);
 
-  // ── Tính tổng số món và tổng tiền ────────────────────────
+  // ── Tính tổng số món, subtotal và final total ──────────
   const cartCount   = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const cartTotal   = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal    = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // ── Đặt hàng: lưu đơn lên Firestore rồi xóa giỏ hàng ────
-  const checkout = async ({ phone, address, paymentMethod = 'cash', note = '' }) => {
+
+  // ── Đặt hàng với mã giảm giá ──────────────────────────
+  const checkout = async ({ phone, address, paymentMethod = 'cash', note = '', coupon = null }) => {
     if (!user) throw new Error('Vui lòng đăng nhập trước khi đặt hàng!');
     if (cart.length === 0) throw new Error('Giỏ hàng đang trống!');
 
@@ -83,28 +113,46 @@ export const CartProvider = ({ children }) => {
       quantity:    item.quantity,
     }));
 
-    const orderId = await createOrder({
+    const orderData = {
       userId:        user.uid,
       userName:      userProfile?.displayName || user.displayName || 'Khách',
       phone,
       address,
       items,
-      totalAmount:   cartTotal,
+      subtotal:      subtotal,
       paymentMethod,
       note,
-    });
+    };
 
+    // Apply coupon if provided
+    if (coupon) {
+      orderData.couponId = coupon.id;
+      orderData.couponCode = coupon.code;
+      orderData.discountAmount = coupon.discountAmount;
+      orderData.totalAmount = subtotal - coupon.discountAmount;
+    } else {
+      orderData.totalAmount = subtotal;
+    }
+
+    const orderId = await createOrder(orderData);
     dispatch({ type: 'CLEAR_CART' });
     return orderId;
   };
+
 
   const value = {
     cart,
     dispatch,
     cartCount,
-    cartTotal,
+    subtotal,
+    appliedCoupon,
+    applyCoupon,
+    clearCoupon,
+    finalTotal: appliedCoupon ? (subtotal - appliedCoupon.discountAmount) : subtotal,
     checkout,
   };
+
+
 
   return (
     <CartContext.Provider value={value}>

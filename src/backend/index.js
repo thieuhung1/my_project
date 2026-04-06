@@ -7,7 +7,7 @@
 // ============================================================
 
 // --- Firebase Core ---
-export { app, analytics, auth, db, storage } from "./firebase/firebaseConfig";
+export { app, analytics, auth, db, storage, rtdb } from "./firebase/firebaseConfig";
 
 // --- Auth Service ---
 export {
@@ -86,6 +86,16 @@ export {
   deleteReview,
   hasUserReviewed,
 } from "./services/reviewService";
+
+// --- Support Chat Service ---
+export {
+  getSupportChats,
+  subscribeToSupportChats,
+  getChatMessages,
+  subscribeToMessages,
+  sendSupportMessage,
+  markChatAsRead,
+} from "./services/supportChatService";
 
 // --- Models ---
 export {

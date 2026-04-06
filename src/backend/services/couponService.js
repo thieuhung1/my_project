@@ -64,3 +64,17 @@ export const toggleCouponStatus = async (couponId) => {
   await updateCoupon(couponId, { isActive: !coupon.isActive });
 };
 
+// ---- Lấy mã giảm giá theo code ----
+export const getCouponByCode = async (code) => {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    where("code", "==", code),
+    where("isActive", "==", true)
+  );
+  const snapshot = await getDocs(q);
+  if (snapshot.empty) throw new Error("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
+  const doc = snapshot.docs[0];
+  return { id: doc.id, ...doc.data() };
+};
+
+
