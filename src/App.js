@@ -27,6 +27,7 @@ import Shipper       from './Pages/Shipper/Index';
 import Header from './Conponents/Header/Index';
 import ProtectedRoute from './Conponents/ProtectedRoute';
 import Footer from './Conponents/Footer/Index';
+import SupportChatIcon from './Conponents/SupportChatIcon/SupportChatIcon';
 
 // ── Context Providers (kết nối Firebase backend) ───────────
 import { AuthProvider }    from './contexts/AuthContext';
@@ -81,7 +82,8 @@ function App() {
 
               <Route path="*"            element={<NotFound />} />
             </Routes>
-            <Footer />
+<Footer />
+        <SupportChatIcon />
           </BrowserRouter>
         </CartProvider>
       </ProductProvider>
