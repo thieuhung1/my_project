@@ -33,6 +33,16 @@ const SupportChatIcon = () => {
     return () => unsubscribe();
   }, [chatId]);
 
+const getBotReply = (message) => {
+  const text = message.toLowerCase();
+  if (text.includes('gio') || text.includes('open') || text.includes('hour')) return 'FoodHub phục vụ mỗi ngày từ 08:00 đến 22:00.';
+  if (text.includes('ship') || text.includes('delivery') || text.includes('phi')) return 'Phí giao hàng nội thành từ 15k, tùy khoảng cách.';
+  if (text.includes('khuyen mai') || text.includes('promo') || text.includes('giam')) return 'Xem khuyến mãi tại trang Khuyến Mãi. Nhập mã WELCOME50 cho người mới.';
+  if (text.includes('dat hang') || text.includes('order') || text.includes('mua')) return 'Để đặt hàng: Chọn món -> Thêm vào giỏ -> Thanh toán.';
+  if (text.includes('don hang') || text.includes('track') || text.includes('kiem tra')) return 'Bạn có thể xem trạng thái đơn hàng của mình trong mục Đơn Hàng.';
+  return 'Hiện tại mình chỉ trả lời được câu hỏi cơ bản. Bạn để lại lời nhắn, Admin sẽ phản hồi sớm nhé!';
+};
+
   const sendMessage = async () => {
     const text = input.trim();
     if (!text) return;
@@ -45,6 +55,19 @@ const SupportChatIcon = () => {
         direction: 'user',
         timestamp: serverTimestamp()
       });
+
+      // Auto Bot Reply
+      setTimeout(async () => {
+        const botText = getBotReply(text);
+        await sendSupportMessage(chatId, {
+          text: botText,
+          userId: 'bot',
+          userName: 'FoodHub Bot',
+          direction: 'bot',
+          timestamp: serverTimestamp()
+        });
+      }, 1000);
+
     } catch (err) {
       setInput(text);
       alert('Gửi thất bại: ' + err.message);
@@ -117,7 +140,7 @@ const SupportChatIcon = () => {
                   >
                     <div className="bubble-text">{msg.text}</div>
                     <div className="bubble-meta">
-                      {msg.direction === 'user' ? 'Bạn' : 'Hỗ trợ'}
+                      {msg.direction === 'user' ? 'Bạn' : (msg.userName || 'Hỗ trợ')}
                     </div>
                   </div>
                 ))}

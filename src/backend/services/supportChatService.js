@@ -112,7 +112,7 @@ export const sendSupportMessage = async (chatId, messageData) => {
   // Logic for unread count
   if (isAdmin) {
     await update(chatRef, { unreadCount: 0 });
-  } else {
+  } else if (messageData.direction === 'user') {
     // Increment unread count (requires a transaction or simple update if we don't care about precise race conditions)
     const snapshot = await get(ref(rtdb, `supportChats/${chatId}/unreadCount`));
     const currentUnread = snapshot.val() || 0;

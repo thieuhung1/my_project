@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 
@@ -31,10 +31,10 @@ const SkeletonCard = () => (
   </div>
 );
 
+
 const Home = () => {
   const { products, loading } = useProducts();
   const featured = Array.isArray(products) ? products.slice(0, 6) : [];
-
 
   return (
     <>
@@ -195,7 +195,7 @@ const Home = () => {
                         <div className="d-flex align-items-center justify-content-between mb-3">
                           <span className="text-muted small">{currency(product.price)}</span>
                           {product.sold && (
-                            <span className="badge rounded-pill" style={{ background: 'var(--light-orange)', color: 'var(--dark-orange)' }}>
+                           <span className="badge rounded-pill" style={{ background: 'var(--light-orange)', color: 'var(--dark-orange)' }}>
                               Đã bán {product.sold}+
                             </span>
                           )}
@@ -288,11 +288,8 @@ const Home = () => {
           ))}
         </div>
       </div>
-
     </>
   );
 };
 
 export default Home;
-
-
