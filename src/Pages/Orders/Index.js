@@ -44,7 +44,7 @@ const { cart, finalTotal, appliedCoupon, checkout, subtotal } = useCart();
 
   // Show checkout if cart has items, else show history
   if (cart.length === 0) {
-    if (loading) return <div className="container my-5 text-center"><div className="spinner-border text-warning" /></div>;
+
     if (error) return <div className="container my-5 text-center text-danger"><h5>{error}</h5></div>;
 
     return (
