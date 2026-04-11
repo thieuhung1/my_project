@@ -96,6 +96,14 @@ const { cart, finalTotal, appliedCoupon, checkout, subtotal } = useCart();
       setCheckoutError('Vui lòng nhập số điện thoại và địa chỉ!');
       return;
     }
+
+    // Kiểm tra giới hạn địa lý: Chỉ cho phép Nghệ An
+    if (!address.toLowerCase().includes('nghệ an')) {
+      setCheckoutError('Rất tiếc, FoodHub hiện chỉ hỗ trợ giao hàng tại tỉnh Nghệ An.');
+      setCheckoutLoading(false);
+      return;
+    }
+
     setCheckoutLoading(true);
     setCheckoutError('');
     try {

@@ -17,27 +17,50 @@ const cartReducer = (state, action) => {
   switch (action.type) {
     case 'ADD_TO_CART': {
       const existing = state.find((item) => item.id === action.payload.id);
+      const stock = action.payload.stock ?? 999;
+      
       if (existing) {
+        if (existing.quantity >= stock) {
+          alert(`Rất tiếc, chỉ còn ${stock} sản phẩm trong kho.`);
+          return state;
+        }
         return state.map((item) =>
           item.id === action.payload.id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
+      if (stock <= 0) {
+        alert("Sản phẩm này hiện đang hết hàng.");
+        return state;
+      }
       return [...state, { ...action.payload, quantity: 1 }];
     }
     case 'REMOVE_FROM_CART':
       return state.filter((item) => item.id !== action.payload.id);
 
-    case 'UPDATE_QUANTITY':
-      if (action.payload.quantity <= 0) {
-        return state.filter((item) => item.id !== action.payload.id);
+    case 'UPDATE_QUANTITY': {
+      const { id, quantity } = action.payload;
+      if (quantity <= 0) {
+        return state.filter((item) => item.id !== id);
       }
+      
+      const item = state.find(i => i.id === id);
+      const stock = item?.stock ?? 999;
+      
+      if (quantity > stock) {
+        alert(`Rất tiếc, chỉ còn ${stock} sản phẩm trong kho.`);
+        return state.map((i) =>
+          i.id === id ? { ...i, quantity: stock } : i
+        );
+      }
+
       return state.map((item) =>
-        item.id === action.payload.id
-          ? { ...item, quantity: action.payload.quantity }
+        item.id === id
+          ? { ...item, quantity: quantity }
           : item
       );
+    }
     case 'CLEAR_CART':
       return [];
 

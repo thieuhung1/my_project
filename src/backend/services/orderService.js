@@ -13,24 +13,56 @@ import {
   where,
   orderBy,
   serverTimestamp,
+  runTransaction,
+  increment,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 
 // Tên collection đơn hàng trong Firestore
 const COLLECTION_NAME = "orders";
+const PRODUCTS_COLLECTION = "products";
 
 // Schema note: now supports couponId, couponCode, discountAmount, subtotal
 
 
-// ---- Tạo đơn hàng mới ----
+// ---- Tạo đơn hàng mới với tính năng trừ tồn kho (Stock decrement) ----
 export const createOrder = async (orderData) => {
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...orderData,
-    status: "pending",         // Trạng thái mặc định: chờ xử lý
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
+  return await runTransaction(db, async (transaction) => {
+    // 1. Kiểm tra tồn kho cho tất cả sản phẩm trong đơn hàng
+    for (const item of orderData.items) {
+      const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
+      const productSnap = await transaction.get(productRef);
+      
+      if (!productSnap.exists()) {
+        throw new Error(`Sản phẩm ${item.productName} không tồn tại!`);
+      }
+      
+      const currentStock = productSnap.data().stock || 0;
+      if (currentStock < item.quantity) {
+        throw new Error(`Sản phẩm ${item.productName} vừa mới hết hàng hoặc không đủ số lượng (Chỉ còn ${currentStock}).`);
+      }
+    }
+
+    // 2. Trừ tồn kho
+    for (const item of orderData.items) {
+      const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
+      transaction.update(productRef, {
+        stock: increment(-item.quantity),
+        updatedAt: serverTimestamp()
+      });
+    }
+
+    // 3. Tạo document đơn hàng
+    const orderRef = doc(collection(db, COLLECTION_NAME));
+    transaction.set(orderRef, {
+      ...orderData,
+      status: "pending",
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+
+    return orderRef.id;
   });
-  return docRef.id;
 };
 
 // ---- Lấy đơn hàng theo ID ----
