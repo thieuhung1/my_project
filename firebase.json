@@ -18,7 +18,8 @@
                                  ]
                 },
     "firestore":  {
-                      "rules":  "database.rules.json"
+                      "rules":  "firestore.rules",
+                      "indexes": "firestore.indexes.json"
                   },
     "functions":  [
                       {

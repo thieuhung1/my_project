@@ -6,18 +6,22 @@ import useOrders from '../../backend/hooks/useOrders';
 
 const fmt = n => (typeof n === 'number' ? n.toLocaleString('vi-VN') + ' VNĐ' : n);
 const ORDER_STATUS_LABEL = {
-  pending: 'Chờ xác nhận',
-  confirmed: 'Đã xác nhận',
-  delivering: 'Đang giao',
-  delivered: 'Hoàn thành',
-  cancelled: 'Đã hủy'
+  PENDING: 'Chờ xử lý',
+  WAITING_FOR_SHIPPER: 'Chờ shipper',
+  CONFIRMED: 'Đã xác nhận',
+  DELIVERING: 'Đang giao',
+  COMPLETED: 'Hoàn thành',
+  FAILED: 'Thất bại',
+  CANCELLED: 'Đã hủy'
 };
 const ORDER_STATUS_COLOR = {
-  pending: 'warning',
-  confirmed: 'info',
-  delivering: 'primary',
-  delivered: 'success',
-  cancelled: 'danger'
+  PENDING: 'warning',
+  WAITING_FOR_SHIPPER: 'secondary',
+  CONFIRMED: 'info',
+  DELIVERING: 'primary',
+  COMPLETED: 'success',
+  FAILED: 'danger',
+  CANCELLED: 'dark'
 };
 
 const Orders = () => {
@@ -28,7 +32,9 @@ const Orders = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('cash');
+  const [paymentMethod, setPaymentMethod] = useState('COD');
+  const [orderType, setOrderType] = useState('DELIVERY'); // 'DELIVERY' or 'DINE_IN'
+  const [tableId, setTableId] = useState('');
   const [note, setNote] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
@@ -101,31 +107,41 @@ const Orders = () => {
     );
   }
 
-  // Checkout form (unchanged)
+  // Checkout form
   const handleCheckout = async (e) => {
-    e.preventDefault();
-    if (!phone || !address) {
-      setCheckoutError('Vui lòng nhập số điện thoại và địa chỉ!');
-      return;
-    }
-
-    if (!address.toLowerCase().includes('nghệ an')) {
-      setCheckoutError('Rất tiếc, FoodHub hiện chỉ hỗ trợ giao hàng tại tỉnh Nghệ An.');
-      setCheckoutLoading(false);
-      return;
+    if (e) e.preventDefault();
+    if (orderType === 'DELIVERY') {
+      if (!phone || !address) {
+        setCheckoutError('Vui lòng nhập số điện thoại và địa chỉ!');
+        return;
+      }
+      if (!address.toLowerCase().includes('nghệ an')) {
+        setCheckoutError('Rất tiếc, FoodHub hiện chỉ hỗ trợ giao hàng tại tỉnh Nghệ An.');
+        return;
+      }
+    } else {
+      if (!tableId) {
+        setCheckoutError('Vui lòng nhập số bàn!');
+        return;
+      }
     }
 
     setCheckoutLoading(true);
     setCheckoutError('');
     try {
       await checkout({
-        phone,
-        address,
-        paymentMethod,
+        type: orderType,
+        tableId: orderType === 'DINE_IN' ? tableId : null,
+        phone: phone || '',
+        address: address || '',
+        paymentMethod: orderType === 'DINE_IN' ? 'CASH' : paymentMethod,
         note,
         coupon: appliedCoupon || null
       });
-      navigate('/orders');
+      setOrderType('DELIVERY'); // Reset after checkout to show orders list
+      setPhone('');
+      setAddress('');
+      setTableId('');
     } catch (err) {
       setCheckoutError(err.message);
     } finally {
@@ -146,42 +162,77 @@ const Orders = () => {
         <div className="col-lg-8">
           <div className="card shadow-sm border-0">
             <div className="card-body">
-              <h5 className="fw-bold mb-3">📍 Thông tin giao hàng</h5>
+              <div className="d-flex gap-2 mb-4">
+                <button 
+                  className={`btn flex-grow-1 ${orderType === 'DELIVERY' ? 'btn-warning shadow-orange' : 'btn-outline-warning'}`}
+                  onClick={() => setOrderType('DELIVERY')}
+                >
+                  <i className="bi bi-truck me-2" /> Giao hàng
+                </button>
+                <button 
+                  className={`btn flex-grow-1 ${orderType === 'DINE_IN' ? 'btn-warning shadow-orange' : 'btn-outline-warning'}`}
+                  onClick={() => setOrderType('DINE_IN')}
+                >
+                  <i className="bi bi-shop me-2" /> Ăn tại quán
+                </button>
+              </div>
+
+              <h5 className="fw-bold mb-3">
+                {orderType === 'DELIVERY' ? '📍 Thông tin giao hàng' : '🪑 Thông tin bàn'}
+              </h5>
               <form onSubmit={handleCheckout}>
                 <div className="row g-3">
-                  <div className="col-md-6">
-                    <label className="form-label fw-semibold">Số điện thoại *</label>
-                    <input 
-                      type="tel" 
-                      className="form-control" 
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="09xxxxxxxx"
-                      required 
-                    />
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label fw-semibold">Phương thức thanh toán</label>
-                    <select 
-                      className="form-select" 
-                      value={paymentMethod}
-                      onChange={(e) => setPaymentMethod(e.target.value)}
-                    >
-                      <option value="cash">💰 Thanh toán khi nhận hàng</option>
-                      <option value="card">💳 Thẻ ngân hàng</option>
-                    </select>
-                  </div>
-                  <div className="col-12">
-                    <label className="form-label fw-semibold">Địa chỉ giao hàng *</label>
-                    <textarea 
-                      className="form-control" 
-                      rows="2"
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Số nhà, đường, phường, quận, thành phố"
-                      required 
-                    />
-                  </div>
+                  {orderType === 'DELIVERY' ? (
+                    <>
+                      <div className="col-md-6">
+                        <label className="form-label fw-semibold">Số điện thoại *</label>
+                        <input 
+                          type="tel" 
+                          className="form-control" 
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="09xxxxxxxx"
+                          required 
+                        />
+                      </div>
+                      <div className="col-md-6">
+                        <label className="form-label fw-semibold">Phương thức thanh toán</label>
+                        <select 
+                          className="form-select" 
+                          value={paymentMethod}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        >
+                          <option value="COD">💰 Thanh toán khi nhận hàng (COD)</option>
+                        </select>
+                      </div>
+                      <div className="col-12">
+                        <label className="form-label fw-semibold">Địa chỉ giao hàng *</label>
+                        <textarea 
+                          className="form-control" 
+                          rows="2"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="Số nhà, đường, phường, quận, thành phố (Nghệ An)"
+                          required 
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="col-12">
+                      <label className="form-label fw-semibold">Chọn bàn / Nhập số bàn *</label>
+                      <input 
+                        type="text" 
+                        className="form-control" 
+                        value={tableId}
+                        onChange={(e) => setTableId(e.target.value)}
+                        placeholder="Ví dụ: Bàn 5, Bàn 12..."
+                        required 
+                      />
+                      <div className="form-text mt-1 text-muted">
+                        * Nhân viên sẽ hỗ trợ phục vụ tại bàn ngay sau khi bạn đặt món.
+                      </div>
+                    </div>
+                  )}
                   <div className="col-12">
                     <label className="form-label">Ghi chú</label>
                     <textarea 

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
 
@@ -19,8 +19,9 @@ const SkeletonCard = () => (
 
 const Products = () => {
   const { products, loading } = useProducts();
-  const { dispatch } = useCart();
+  const { addToCart } = useCart();
   const [q, setQ] = useState('');
+  const navigate = useNavigate();
   const [cat, setCat] = useState('Tất cả');
 
   const categories = useMemo(() => {
@@ -85,7 +86,11 @@ const Products = () => {
                     <button
                       className="btn btn-success btn-sm fw-bold"
                       onClick={() => {
-                        dispatch({ type: 'ADD_TO_CART', payload: product });
+                        const ok = addToCart(product);
+                        if (!ok) {
+                          navigate('/login');
+                          return;
+                        }
                         alert(`Đã thêm ${product.name} vào giỏ hàng!`);
                       }}
                     >
@@ -106,3 +111,4 @@ const Products = () => {
 };
 
 export default Products;
+

@@ -18,12 +18,26 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 
-// Tên collection đơn hàng trong Firestore
-const COLLECTION_NAME = "orders";
-const PRODUCTS_COLLECTION = "products";
+// Các hằng số trạng thái đơn hàng
+export const ORDER_STATUS = {
+  PENDING: "PENDING",                   // Chờ xử lý
+  WAITING_FOR_SHIPPER: "WAITING_FOR_SHIPPER", // Chờ shipper nhận (cho Delivery)
+  CONFIRMED: "CONFIRMED",               // Đã xác nhận (có shipper hoặc admin duyệt)
+  DELIVERING: "DELIVERING",             // Đang giao hàng
+  COMPLETED: "COMPLETED",               // Đã hoàn thành
+  FAILED: "FAILED",                     // Giao hàng thất bại
+  CANCELLED: "CANCELLED",               // Đã hủy
+};
+
+export const PAYMENT_STATUS = {
+  UNPAID: "UNPAID",
+  PAID: "PAID",
+};
 
 // Schema note: now supports couponId, couponCode, discountAmount, subtotal
 
+export const COLLECTION_NAME = "orders";
+export const PRODUCTS_COLLECTION = "products";
 
 // ---- Tạo đơn hàng mới với tính năng trừ tồn kho (Stock decrement) ----
 export const createOrder = async (orderData) => {
@@ -54,14 +68,26 @@ export const createOrder = async (orderData) => {
 
     // 3. Tạo document đơn hàng
     const orderRef = doc(collection(db, COLLECTION_NAME));
+    const initialStatus = orderData.type === "DINE_IN" ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
+    
     transaction.set(orderRef, {
       ...orderData,
-      status: "pending",
+      status: initialStatus,
+      paymentStatus: orderData.paymentStatus || PAYMENT_STATUS.UNPAID,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
     return orderRef.id;
+  });
+};
+
+// ---- Cập nhật trạng thái thanh toán ----
+export const updatePaymentStatus = async (orderId, paymentStatus) => {
+  const docRef = doc(db, COLLECTION_NAME, orderId);
+  await updateDoc(docRef, {
+    paymentStatus,
+    updatedAt: serverTimestamp(),
   });
 };
 

@@ -1,0 +1,66 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database
+  }/documents {
+    // Hàm hỗ trợ kiểm tra role
+    function hasRole(role) {
+      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == role;
+    }
+    
+    function isAdmin() { return hasRole('admin');
+    }
+    function isShipper() { return hasRole('staff');
+    }
+    function isWaiter() { return hasRole('waiter');
+    }
+    // Users: Khách xem profile mình, Admin xem tất cả
+    match /users/{userId
+    } {
+      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (request.auth.uid == userId || isAdmin());
+    }
+    // Shippers: Công khai status ONLINE/OFFLINE cho hệ thống gán đơn
+    match /shippers/{shipperId
+    } {
+      allow read: if true;
+      allow write: if request.auth != null && (request.auth.uid == shipperId || isAdmin());
+    }
+    // Orders:
+    match /orders/{orderId
+    } {
+      // User xem đơn của mình, Staff/Admin/Waiter xem đơn liên quan
+      allow read: if request.auth != null && (
+        resource.data.userId == request.auth.uid || 
+        isAdmin() || 
+        isShipper() || 
+        isWaiter()
+      );
+      
+      // User tạo đơn, Admin/Staff/Waiter cập nhật trạng thái
+      allow create: if request.auth != null;
+      allow update: if request.auth != null && (
+        isAdmin() || 
+        (isShipper() && (resource.data.status == 'WAITING_FOR_SHIPPER' || resource.data.shipper_id == request.auth.uid)) ||
+        (isWaiter() && resource.data.type == 'DINE_IN') ||
+        (request.auth.uid == resource.data.userId && resource.data.status == 'PENDING') // User hủy đơn khi chưa xác nhận
+      );
+    }
+    // Sản phẩm, Danh mục: Công khai cho khách xem
+    match /products/{document
+    } {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /categories/{document
+    } {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /coupons/{document
+    } {
+      allow read: if request.auth != null;
+      allow write: if isAdmin();
+    }
+  }
+}

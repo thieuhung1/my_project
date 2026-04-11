@@ -22,6 +22,7 @@ import Contact       from './Pages/Contact/Index';
 import About         from './Pages/About/Index';
 import Admin         from './Pages/Admin/Index';
 import Shipper       from './Pages/Shipper/Index';
+import Waiter        from './Pages/Waiter/Index';
 
 // ── Components ─────────────────────────────────────────────
 import Header from './Conponents/Header/Index';
@@ -78,6 +79,9 @@ function App() {
               </Route>
               <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>
                 <Route path="/shipper" element={<Shipper />} />
+              </Route>
+              <Route element={<ProtectedRoute allowedRoles={['waiter', 'admin']} />}>
+                <Route path="/waiter" element={<Waiter />} />
               </Route>
 
               <Route path="*"            element={<NotFound />} />

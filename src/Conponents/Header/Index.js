@@ -9,7 +9,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [scrolled, setScrolled] = useState(false);
   const { cartCount } = useCart();
-  const { isAuthenticated, signOut, user, userProfile, isAdmin, isShipper } = useAuth();
+  const { isAuthenticated, signOut, user, userProfile, isAdmin, isShipper, isWaiter } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -127,9 +127,9 @@ const Header = () => {
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end shadow">
                   <li><Link className="dropdown-item" to="/my-account" onClick={closeNavbar}><i className="bi bi-person me-2" />Tài Khoản</Link></li>
-                  <li><Link className="dropdown-item" to="/orders" onClick={closeNavbar}><i className="bi bi-receipt me-2" />Đơn Hàng</Link></li>
                   {isAdmin && <li><Link className="dropdown-item" to="/admin" onClick={closeNavbar}><i className="bi bi-shield-lock me-2" />Quản Trị Admin</Link></li>}
                   {isShipper && <li><Link className="dropdown-item" to="/shipper" onClick={closeNavbar}><i className="bi bi-truck me-2" />Giao Hàng</Link></li>}
+                  {isWaiter && <li><Link className="dropdown-item" to="/waiter" onClick={closeNavbar}><i className="bi bi-person-badge me-2" />Bồi Bàn</Link></li>}
                   <li><hr className="dropdown-divider" /></li>
                   <li><button className="dropdown-item text-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2" />Đăng Xuất</button></li>
                 </ul>

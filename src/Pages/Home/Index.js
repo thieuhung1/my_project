@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
 
@@ -35,8 +35,9 @@ const SkeletonCard = () => (
 
 const Home = () => {
   const { products, loading } = useProducts();
-  const { dispatch } = useCart();
+  const { addToCart } = useCart();
   const featured = Array.isArray(products) ? products.slice(0, 6) : [];
+  const navigate = useNavigate();
 
   return (
     <>
@@ -215,7 +216,11 @@ const Home = () => {
                             className="btn btn-warning btn-sm"
                             aria-label={`Đặt mua ${product.name}`}
                             onClick={() => {
-                              dispatch({ type: 'ADD_TO_CART', payload: product });
+                              const ok = addToCart(product);
+                              if (!ok) {
+                                navigate('/login');
+                                return;
+                              }
                               alert(`Đã thêm ${product.name} vào giỏ hàng!`);
                             }}
                           >
@@ -298,3 +303,5 @@ const Home = () => {
 };
 
 export default Home;
+
+

@@ -1,4 +1,6 @@
-// ============================================================
+const fs = require('fs');
+const path = 'c:\\Users\\thieu\\Downloads\\File kế hoạch hè 2025\\js\\my_project\\src\\contexts\\CartContext.js';
+const content = `// ============================================================
 // CartContext.js - Context giỏ hàng (localStorage + Firestore orders)
 // ============================================================
 
@@ -40,7 +42,7 @@ export const CartProvider = ({ children }) => {
   const [isCartHydrated, setIsCartHydrated] = useState(false);
   const [cart, baseDispatch] = useReducer(cartReducer, []);
   
-  const cartStorageKey = useMemo(() => (user?.uid ? `${CART_KEY_PREFIX}_${user.uid}` : null), [user?.uid]);
+  const cartStorageKey = useMemo(() => (user?.uid ? \`\${CART_KEY_PREFIX}_\${user.uid}\` : null), [user?.uid]);
 
   useEffect(() => {
     setIsCartHydrated(false);
@@ -115,8 +117,6 @@ export const CartProvider = ({ children }) => {
     baseDispatch({ type: 'CLEAR_CART' }); return orderId;
   };
 
-  const finalTotal = appliedCoupon ? (subtotal - appliedCoupon.discountAmount) : subtotal;
-
   const value = { 
       cart, 
       dispatch, 
@@ -126,9 +126,10 @@ export const CartProvider = ({ children }) => {
       appliedCoupon, 
       applyCoupon, 
       clearCoupon, 
-      finalTotal, 
+      finalTotal: appliedCoupon ? (subtotal - appliedCoupon.discountAmount) : subtotal, 
       checkout 
   };
-  
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
-};
+};`;
+fs.writeFileSync(path, content, 'utf8');
+console.log('SUCCESS');

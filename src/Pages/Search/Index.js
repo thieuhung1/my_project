@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
 
@@ -7,8 +7,9 @@ const Search = () => {
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q') || '';
   const { products } = useProducts();
-  const { dispatch } = useCart();
+  const { addToCart } = useCart();
   const [results, setResults] = useState([]);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const q = query.trim().toLowerCase();
@@ -51,7 +52,11 @@ const Search = () => {
                     <button
                       className="btn btn-success btn-sm"
                       onClick={() => {
-                        dispatch({ type: 'ADD_TO_CART', payload: product });
+                        const ok = addToCart(product);
+                        if (!ok) {
+                          navigate('/login');
+                          return;
+                        }
                         alert(`Đã thêm ${product.name} vào giỏ hàng!`);
                       }}
                     >
@@ -72,3 +77,4 @@ const Search = () => {
 };      
 
 export default Search;
+

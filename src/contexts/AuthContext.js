@@ -129,6 +129,7 @@ export const AuthProvider = ({ children }) => {
 
   const isAdmin = userProfile?.role === 'admin';
   const isShipper = userProfile?.role === 'staff';
+  const isWaiter = userProfile?.role === 'waiter';
   const isAuthenticated = !!user;
 
   const value = {
@@ -138,6 +139,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     isAdmin,
     isShipper,
+    isWaiter,
     signUp,
     signIn,
     signInWithGoogle,
