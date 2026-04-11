@@ -82,7 +82,13 @@ const Products = () => {
                     <Link to={`/product/${product.id}`} className="btn btn-warning btn-sm fw-bold">
                       <i className="bi bi-eye me-1" /> Chi tiết
                     </Link>
-                    <button className="btn btn-success btn-sm fw-bold" onClick={() => dispatch({type: 'ADD_TO_CART', payload: product})}>
+                    <button
+                      className="btn btn-success btn-sm fw-bold"
+                      onClick={() => {
+                        dispatch({ type: 'ADD_TO_CART', payload: product });
+                        alert(`Đã thêm ${product.name} vào giỏ hàng!`);
+                      }}
+                    >
                       <i className="bi bi-cart-plus me-1" /> Giỏ hàng
                     </button>
                   </div>

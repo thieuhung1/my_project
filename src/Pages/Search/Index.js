@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
@@ -48,7 +48,13 @@ const Search = () => {
                   <h5 className="fw-bold text-truncate" title={product.name}>{product.name}</h5>
                   <p className="text-muted mb-3">{product.price.toLocaleString('vi-VN')} VNĐ</p>
                   <div className="mt-auto d-flex gap-2">
-                    <button className="btn btn-success btn-sm" onClick={() => dispatch({type: 'ADD_TO_CART', payload: product})}>
+                    <button
+                      className="btn btn-success btn-sm"
+                      onClick={() => {
+                        dispatch({ type: 'ADD_TO_CART', payload: product });
+                        alert(`Đã thêm ${product.name} vào giỏ hàng!`);
+                      }}
+                    >
                       <i className="bi bi-cart-plus me-1" /> Giỏ hàng
                     </button>
                     <Link to={`/product/${product.id}`} className="btn btn-warning btn-sm">

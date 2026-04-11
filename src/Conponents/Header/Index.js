@@ -36,13 +36,10 @@ const Header = () => {
   const closeNavbar = () => {
     const navbarCollapse = document.getElementById('navbarNav');
     if (navbarCollapse && navbarCollapse.classList.contains('show')) {
-      if (window.bootstrap && window.bootstrap.Collapse) {
-        const bsCollapse = window.bootstrap.Collapse.getInstance(navbarCollapse);
-        if (bsCollapse) {
-          bsCollapse.hide();
-        }
-      } else {
-        navbarCollapse.classList.remove('show');
+      // Dùng nút toggler để đóng lại một cách tự nhiên nhất
+      const toggler = document.querySelector('.navbar-toggler');
+      if (toggler) {
+        toggler.click();
       }
     }
   };

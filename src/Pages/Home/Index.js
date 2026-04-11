@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
+import { useCart } from '../../contexts/CartContext';
 
 
 const currency = (n) =>
@@ -34,6 +35,7 @@ const SkeletonCard = () => (
 
 const Home = () => {
   const { products, loading } = useProducts();
+  const { dispatch } = useCart();
   const featured = Array.isArray(products) ? products.slice(0, 6) : [];
 
   return (
@@ -209,14 +211,17 @@ const Home = () => {
                             <i className="bi bi-eye me-1" />
                             Chi Tiết
                           </Link>
-                          <Link
-                            to="/cart"
+                          <button
                             className="btn btn-warning btn-sm"
                             aria-label={`Đặt mua ${product.name}`}
+                            onClick={() => {
+                              dispatch({ type: 'ADD_TO_CART', payload: product });
+                              alert(`Đã thêm ${product.name} vào giỏ hàng!`);
+                            }}
                           >
                             <i className="bi bi-cart-plus me-1" />
                             Đặt Mua
-                          </Link>
+                          </button>
                         </div>
                       </div>
                     </div>

@@ -22,6 +22,7 @@ const ProductDetail = () => {
 
   const addToCart = () => {
     for (let i = 0; i < qty; i++) dispatch({ type: 'ADD_TO_CART', payload: product });
+    alert(`Đã thêm ${qty} ${product.name} vào giỏ hàng!`);
   };
   const buyNow = () => { addToCart(); navigate('/cart'); };
 
