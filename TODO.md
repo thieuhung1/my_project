@@ -1,30 +1,34 @@
-# TODO: Fix Cart (add coupons) + Orders (fix checkout bug)
+# React White Screen Fix - PROGRESS UPDATE
 
-## Plan Breakdown (Approved ✅)
+## ✅ DONE
+- File analysis complete
+- Added ErrorBoundary + disabled StrictMode temporarily
+- Local production preview **WORKING** (localhost:51277 - routes /about OK, assets load)
+- Build successful (React 19 OK locally)
 
-### Step 1: Create TODO.md [COMPLETED]
-### Step 2: Add getCouponByCode to couponService.js
-### Step 3: Update CartContext.js (add coupon state, discount-aware checkout) [COMPLETED]
-### Step 4: Update Cart/Index.js (add coupon input/UI) [COMPLETED]
+## 🔍 Diagnosis
+**Local prod build OK** → Issue **Firebase deploy/cache/subpath**
 
-### Step 5: Update Orders/Index.js (add checkout form + history toggle)
-### Step 6: Update orderService.js (store coupon data) [COMPLETED]"
+## 📋 REMAINING STEPS
+1. [RUNNING] npm run build (new with ErrorBoundary)
+2. firebase hosting:sites:list (check sites)
+3. firebase deploy --only hosting (fresh build)
+4. Hard refresh deployed site (Ctrl+Shift+R)
+5. Test Console F12
 
-### Step 6: Update orderService.js (store coupon data)
-### Step 7: Test end-to-end + cleanup
+## Commands to run:
+```
+npm run build
+firebase deploy --only hosting
+```
 
-**ALL STEPS COMPLETED ✅**
+**Share:**
+- Deployed URL
+- firebase deploy output
+- F12 Console errors on deployed site
 
-Run `npm start` to test:
-1. Add to cart
-2. Apply coupon in cart
-3. Checkout at /orders
-4. View history with discount shown
-
-Feature complete.
-
-
-
-
-
+## Optional later:
+- Re-enable StrictMode
+- Downgrade React to 18 if issues persist
+- Fix ESLint warnings (BOM)
 

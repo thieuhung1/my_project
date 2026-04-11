@@ -21,12 +21,30 @@ const Header = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (q) navigate(`/search?q=${encodeURIComponent(q)}`);
+    if (q) {
+      navigate(`/search?q=${encodeURIComponent(q)}`);
+      closeNavbar();
+    }
   };
 
   const handleLogout = async () => {
     await signOut();
+    closeNavbar();
     navigate('/signin');
+  };
+
+  const closeNavbar = () => {
+    const navbarCollapse = document.getElementById('navbarNav');
+    if (navbarCollapse && navbarCollapse.classList.contains('show')) {
+      if (window.bootstrap && window.bootstrap.Collapse) {
+        const bsCollapse = window.bootstrap.Collapse.getInstance(navbarCollapse);
+        if (bsCollapse) {
+          bsCollapse.hide();
+        }
+      } else {
+        navbarCollapse.classList.remove('show');
+      }
+    }
   };
 
   const navLinkClass = ({ isActive }) =>
@@ -43,7 +61,7 @@ const Header = () => {
       }}
     >
       <div className="container">
-        <Link className="navbar-brand fw-bold d-flex align-items-center gap-2" to="/">
+        <Link className="navbar-brand fw-bold d-flex align-items-center gap-2" to="/" onClick={closeNavbar}>
           <span role="img" aria-label="logo">🚀</span>
           <span style={{ fontFamily: 'Roboto Condensed, sans-serif', letterSpacing: 0.3 }}>FoodHub</span>
         </Link>
@@ -62,10 +80,10 @@ const Header = () => {
 
         <div className="collapse navbar-collapse" id="navbarNav">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item"><NavLink className={navLinkClass} to="/">Trang Chủ</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/products">Sản Phẩm</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/about">Giới Thiệu</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/contact">Liên Hệ</NavLink></li>
+            <li className="nav-item"><NavLink className={navLinkClass} to="/" onClick={closeNavbar}>Trang Chủ</NavLink></li>
+            <li className="nav-item"><NavLink className={navLinkClass} to="/products" onClick={closeNavbar}>Sản Phẩm</NavLink></li>
+            <li className="nav-item"><NavLink className={navLinkClass} to="/about" onClick={closeNavbar}>Giới Thiệu</NavLink></li>
+            <li className="nav-item"><NavLink className={navLinkClass} to="/contact" onClick={closeNavbar}>Liên Hệ</NavLink></li>
           </ul>
 
           <form className="d-flex me-lg-3 my-2 my-lg-0" role="search" onSubmit={handleSearch}>
@@ -87,7 +105,7 @@ const Header = () => {
           </form>
 
           <div className="d-flex align-items-center gap-2">
-            <Link to="/cart" className="btn btn-outline-light position-relative" aria-label="Giỏ hàng">
+            <Link to="/cart" className="btn btn-outline-light position-relative" aria-label="Giỏ hàng" onClick={closeNavbar}>
               <i className="bi bi-bag fs-5" />
               {cartCount > 0 && (
                 <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
@@ -111,16 +129,16 @@ const Header = () => {
                   </span>
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end shadow">
-                  <li><Link className="dropdown-item" to="/my-account"><i className="bi bi-person me-2" />Tài Khoản</Link></li>
-                  <li><Link className="dropdown-item" to="/orders"><i className="bi bi-receipt me-2" />Đơn Hàng</Link></li>
-                  {isAdmin && <li><Link className="dropdown-item" to="/admin"><i className="bi bi-shield-lock me-2" />Quản Trị Admin</Link></li>}
-                  {isShipper && <li><Link className="dropdown-item" to="/shipper"><i className="bi bi-truck me-2" />Giao Hàng</Link></li>}
+                  <li><Link className="dropdown-item" to="/my-account" onClick={closeNavbar}><i className="bi bi-person me-2" />Tài Khoản</Link></li>
+                  <li><Link className="dropdown-item" to="/orders" onClick={closeNavbar}><i className="bi bi-receipt me-2" />Đơn Hàng</Link></li>
+                  {isAdmin && <li><Link className="dropdown-item" to="/admin" onClick={closeNavbar}><i className="bi bi-shield-lock me-2" />Quản Trị Admin</Link></li>}
+                  {isShipper && <li><Link className="dropdown-item" to="/shipper" onClick={closeNavbar}><i className="bi bi-truck me-2" />Giao Hàng</Link></li>}
                   <li><hr className="dropdown-divider" /></li>
                   <li><button className="dropdown-item text-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2" />Đăng Xuất</button></li>
                 </ul>
               </div>
             ) : (
-              <Link to="/signin" className="btn btn-light">
+              <Link to="/signin" className="btn btn-light" onClick={closeNavbar}>
                 <i className="bi bi-person me-1" /> Đăng Nhập
               </Link>
             )}
