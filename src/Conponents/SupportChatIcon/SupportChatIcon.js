@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { subscribeToMessages, sendSupportMessage } from '../../backend/services/supportChatService';
-import { getAiReply } from '../../backend/services/aiService';
 import { serverTimestamp } from 'firebase/database';
 import useAuth from '../../backend/hooks/useAuth';
 import './SupportChat.css';
@@ -25,31 +24,12 @@ const SupportChatIcon = () => {
     const unsubscribe = subscribeToMessages(chatId, (data) => {
       const sorted = (data || []).slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       setMessages(sorted);
-      // giả lập trạng thái "đang trả lời" nếu tin cuối là của user
-      const last = sorted[sorted.length - 1];
-      setIsTyping(last?.direction === 'user');
-      const t = setTimeout(() => setIsTyping(false), 1200);
-      return () => clearTimeout(t);
+      
+      // Kiểm tra trạng thái đang gõ từ phía admin nếu có (logic này có thể mở rộng sau)
+      // Hiện tại chỉ đơn giản là nhận tin nhắn real-time
     });
     return () => unsubscribe();
   }, [chatId]);
-
-// Secure backend AI reply with retry
-const getAiReplyWithRetry = async (chatId, userMessage, retries = 3) => {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      const aiResponse = await getAiReply(chatId, userMessage);
-      return aiResponse;
-    } catch (error) {
-      console.warn(`AI attempt ${attempt} failed:`, error.message);
-      if (attempt === retries) {
-        return "🤖 AI tạm bận. Admin sẽ reply sớm!";
-      }
-      // Wait exponential backoff
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-    }
-  }
-};
 
   const sendMessage = async () => {
     const text = input.trim();
@@ -63,23 +43,9 @@ const getAiReplyWithRetry = async (chatId, userMessage, retries = 3) => {
         direction: 'user',
         timestamp: serverTimestamp()
       });
-
-      // Secure Auto AI Bot Reply (backend)
-      setIsTyping(true);
-      const aiResponse = await getAiReplyWithRetry(chatId, text);
-      
-      await sendSupportMessage(chatId, {
-        text: aiResponse,
-        userId: 'bot',
-        userName: 'FoodHub AI',
-        direction: 'bot',
-        timestamp: serverTimestamp()
-      });
-      setIsTyping(false);
-
+      // Khi gửi tin nhắn trực tiếp cho Admin, không cần xử lý AI bot reply ở đây nữa
     } catch (err) {
       setInput(text);
-      setIsTyping(false);
       alert('Gửi thất bại: ' + err.message);
     }
   };

@@ -61,7 +61,6 @@ const MyAccount = () => {
           </div>
           <div className="card mt-3 border-0 shadow-sm">
             <div className="card-body d-grid gap-2">
-              <Link to="/orders" className="btn btn-outline-primary"><i className="bi bi-receipt me-2" /> Lịch sử đơn hàng</Link>
               <button className="btn btn-danger" onClick={signOut}><i className="bi bi-box-arrow-right me-2" /> Đăng xuất</button>
             </div>
           </div>

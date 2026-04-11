@@ -32,7 +32,7 @@ const Cart = () => {
       <div className="container my-5 text-center animate__animated animate__fadeIn">
         <div className="py-5">
           <div className="display-5 mb-3">🛒</div>
-          <h2 className="fw-bold mb-2">Giỏ hàng trống</h2>
+          <h2 className="fw-bold mb-2">Bạn chưa có sản phẩm trong giỏ hàng</h2>
           <p className="text-muted mb-4">Hãy thêm món yêu thích vào giỏ nhé!</p>
           <Link to="/products" className="btn btn-warning btn-lg shadow-orange">
             <i className="bi bi-bag-plus me-2" /> Mua sắm ngay
