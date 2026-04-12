@@ -112,7 +112,9 @@ export const CartProvider = ({ children }) => {
       orderData.discountAmount = coupon.discountAmount; orderData.totalAmount = subtotal - coupon.discountAmount;
     } else { orderData.totalAmount = subtotal; }
     const orderId = await createOrder(orderData);
-    baseDispatch({ type: 'CLEAR_CART' }); return orderId;
+    baseDispatch({ type: 'CLEAR_CART' });
+    setAppliedCoupon(null);
+    return orderId;
   };
 
   const finalTotal = appliedCoupon ? (subtotal - appliedCoupon.discountAmount) : subtotal;

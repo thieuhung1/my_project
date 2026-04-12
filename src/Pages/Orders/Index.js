@@ -28,7 +28,7 @@ const Orders = () => {
   const { user, isAuthenticated } = useAuth();
   const { cart, finalTotal, appliedCoupon, checkout, subtotal } = useCart();
   const navigate = useNavigate();
-  const { orders, error } = useOrders(user?.uid);
+  const { orders, error, refetch } = useOrders(user?.uid);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
@@ -38,6 +38,8 @@ const Orders = () => {
   const [note, setNote] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
+  const [checkoutSuccess, setCheckoutSuccess] = useState(false);
+  const [lastOrderId, setLastOrderId] = useState('');
 
   // Track loading from hook
   useEffect(() => {
@@ -48,6 +50,28 @@ const Orders = () => {
 
   if (!isAuthenticated) {
     return <div className="container my-5 text-center"><h2>Vui lòng <Link to="/signin">đăng nhập</Link> để thanh toán</h2></div>;
+  }
+
+  // ---- Màn hình thành công sau khi đặt hàng ----
+  if (checkoutSuccess) {
+    return (
+      <div className="container my-5 animate__animated animate__fadeIn">
+        <div className="text-center py-5">
+          <div className="display-3 mb-3">🎉</div>
+          <h2 className="fw-bold text-success mb-3">Đặt hàng thành công!</h2>
+          <p className="text-muted mb-1">Mã đơn hàng: <strong className="text-warning">#{lastOrderId.slice(-6).toUpperCase()}</strong></p>
+          <p className="text-muted mb-4">Cảm ơn bạn đã mua hàng tại FoodHub. Chúng tôi sẽ xử lý đơn hàng sớm nhất!</p>
+          <div className="d-flex gap-3 justify-content-center">
+            <button className="btn btn-warning shadow-orange" onClick={() => { setCheckoutSuccess(false); refetch(); }}>
+              <i className="bi bi-receipt me-2" /> Xem đơn hàng
+            </button>
+            <Link to="/products" className="btn btn-outline-secondary">
+              <i className="bi bi-bag-plus me-2" /> Tiếp tục mua sắm
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (cart.length === 0) {
@@ -129,7 +153,7 @@ const Orders = () => {
     setCheckoutLoading(true);
     setCheckoutError('');
     try {
-      await checkout({
+      const orderId = await checkout({
         type: orderType,
         tableId: orderType === 'DINE_IN' ? tableId : null,
         phone: phone || '',
@@ -138,12 +162,17 @@ const Orders = () => {
         note,
         coupon: appliedCoupon || null
       });
-      setOrderType('DELIVERY'); // Reset after checkout to show orders list
+      // Đặt hàng thành công - hiển thị màn hình xác nhận
+      setLastOrderId(orderId || '');
+      setCheckoutSuccess(true);
+      // Reset form
+      setOrderType('DELIVERY');
       setPhone('');
       setAddress('');
       setTableId('');
+      setNote('');
     } catch (err) {
-      setCheckoutError(err.message);
+      setCheckoutError(err.message || 'Đã xảy ra lỗi khi đặt hàng. Vui lòng thử lại!');
     } finally {
       setCheckoutLoading(false);
     }
@@ -267,6 +296,23 @@ const Orders = () => {
           <div className="card shadow-sm border-0 sticky-top" style={{top: '1rem'}}>
             <div className="card-body">
               <h5 className="fw-bold mb-3">📦 Đơn hàng</h5>
+              {cart.map(item => (
+                <div key={item.id} className="d-flex align-items-center gap-2 mb-2">
+                  <img 
+                    src={item.imageUrl || item.image || '/ASSETS/Images/placeholder.jpg'} 
+                    alt={item.name}
+                    className="rounded"
+                    style={{ width: 40, height: 40, objectFit: 'cover' }}
+                    onError={(e) => { e.currentTarget.src = '/ASSETS/Images/placeholder.jpg'; }}
+                  />
+                  <div className="flex-grow-1">
+                    <div className="small fw-semibold text-truncate" style={{maxWidth: 180}}>{item.name}</div>
+                    <div className="small text-muted">x{item.quantity}</div>
+                  </div>
+                  <div className="small fw-semibold">{fmt(item.price * item.quantity)}</div>
+                </div>
+              ))}
+              <hr />
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Tạm tính ({cart.length} món)</span>
                 <span className="fw-semibold">{fmt(subtotal)}</span>
@@ -295,4 +341,3 @@ const Orders = () => {
 };
 
 export default Orders;
-

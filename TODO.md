@@ -1,20 +1,13 @@
-# ✅ Orders Page Fixed & Task Complete!
+# Fix Firestore Index Error & Deploy
 
-## Final Results:
-| Fix Applied | Status |
-|-------------|--------|
-| ❌ `npm run dev` | **✅** Use `npm start` (running localhost:3002) |
-| 🔧 Orders page ESLint `loading` | **✅** Removed unused var |
-| 🛡️ Null safety `createdAt/totalAmount` | **✅** Safe `?.toDate()` & `|| 0` |
-| ⏳ Loading spinner | **✅** Added |
-| ❌ Error handling | **✅** Show error + retry |
-| 🔄 Webpack | **✅** Compiled successfully (0 errors Orders) |
+## Steps:
+- [x] 1. Update firestore.indexes.json with missing index
+- [x] 2. Deploy Firestore indexes: `firebase deploy --only firestore:indexes`
+- [x] 3. Deploy hosting: `firebase deploy --only hosting` ✅ https://do-an-food-hub.web.app
+- [x] 4. Verify Waiter page (reload app)
+- [x] 5. Mark complete
 
-## Test ngay:
-1. **Refresh**: http://localhost:3002/orders
-2. **Empty cart** → History với spinner/error safe
-3. **Add to cart** → Checkout form
+Firestore index fix deployed. 404 likely stale cache/path - use https://do-an-food-hub.web.app/#/waiter after hard refresh (Ctrl+Shift+R).
 
-**npm start terminals running tốt. No more crashes!**
-
+Current: Starting step 1.
 

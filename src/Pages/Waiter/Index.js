@@ -10,15 +10,16 @@ const WaiterDashboard = () => {
     useEffect(() => {
         const q = query(
             collection(db, 'orders'),
-            where('type', '==', 'DINE_IN'),
             orderBy('createdAt', 'desc')
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            const ordersData = snapshot.docs.map(doc => ({
-                id: doc.id,
-                ...doc.data()
-            }));
+            const ordersData = snapshot.docs
+                .filter(doc => doc.data().type === 'DINE_IN')
+                .map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
             setOrders(ordersData);
             setLoading(false);
         });

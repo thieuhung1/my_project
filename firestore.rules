@@ -50,7 +50,14 @@ service cloud.firestore {
     match /products/{document
     } {
       allow read: if true;
-      allow write: if isAdmin();
+      // Admin có toàn quyền ghi
+      allow create, delete: if isAdmin();
+      // Admin update tất cả; User thường chỉ được update stock + updatedAt (khi đặt hàng)
+      allow update: if isAdmin() || (
+        request.auth != null &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['stock', 'updatedAt']) &&
+        request.resource.data.stock <= resource.data.stock
+      );
     }
     match /categories/{document
     } {
