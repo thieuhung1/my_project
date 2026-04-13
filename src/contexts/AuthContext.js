@@ -14,6 +14,7 @@ import {
   createUserProfile,
   getUserProfile,
   updateUserProfile,
+  toggleFavorite as toggleFavoriteService,
 } from '../backend';
 
 const AuthContext = createContext();
@@ -127,6 +128,16 @@ export const AuthProvider = ({ children }) => {
     setUser({ ...user }); // Kích hoạt re-render để cập nhật auth user object
   };
 
+  const toggleFavorite = async (productId) => {
+    if (!user) throw new Error('Vui lòng đăng nhập để thực hiện tính năng này!');
+    const isFavorite = userProfile?.favorites?.includes(productId);
+    await toggleFavoriteService(user.uid, productId, !isFavorite);
+
+    // Cập nhật state local
+    const newProfile = await getUserProfile(user.uid);
+    setUserProfile(newProfile);
+  };
+
   const isAdmin = userProfile?.role === 'admin';
   const isShipper = userProfile?.role === 'staff';
   const isWaiter = userProfile?.role === 'waiter';
@@ -146,6 +157,7 @@ export const AuthProvider = ({ children }) => {
     signOut,
     forgotPassword,
     updateUser,
+    toggleFavorite,
   };
 
   return (

@@ -12,6 +12,8 @@ import {
   query,
   where,
   serverTimestamp,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 
@@ -70,4 +72,18 @@ export const getUsersByRole = async (role) => {
   );
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+// ---- Quản lý danh sách yêu thích ----
+export const toggleFavorite = async (userId, productId, isFavorite) => {
+  const docRef = doc(db, COLLECTION_NAME, userId);
+  await updateDoc(docRef, {
+    favorites: isFavorite ? arrayUnion(productId) : arrayRemove(productId),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const getFavorites = async (userId) => {
+  const userProfile = await getUserProfile(userId);
+  return userProfile.favorites || [];
 };
