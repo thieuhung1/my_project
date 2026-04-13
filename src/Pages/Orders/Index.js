@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
 import useOrders from '../../backend/hooks/useOrders';
@@ -27,7 +27,6 @@ const ORDER_STATUS_COLOR = {
 const Orders = () => {
   const { user, isAuthenticated } = useAuth();
   const { cart, finalTotal, appliedCoupon, checkout, subtotal } = useCart();
-  const navigate = useNavigate();
   const { orders, error } = useOrders(user?.uid);
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [phone, setPhone] = useState('');
