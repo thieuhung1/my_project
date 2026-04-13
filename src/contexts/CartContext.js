@@ -13,7 +13,10 @@ const CART_KEY_PREFIX = 'foodhub_cart';
 const cartReducer = (state, action) => {
   switch (action.type) {
     case 'ADD_TO_CART': {
-      const { product, quantity = 1 } = action.payload;
+      // Handle both { product, quantity } and legacy product-only payloads
+      const product = action.payload.product || action.payload;
+      const quantity = action.payload.quantity ?? 1;
+
       const existing = state.find((item) => item.id === product.id);
       const stock = product.stock ?? 999;
 
