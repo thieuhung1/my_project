@@ -127,6 +127,7 @@ const Header = () => {
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end shadow">
                   <li><Link className="dropdown-item" to="/my-account" onClick={closeNavbar}><i className="bi bi-person me-2" />Tài Khoản</Link></li>
+                  <li><Link className="dropdown-item" to="/my-orders" onClick={closeNavbar}><i className="bi bi-basket me-2" />Lịch Sử Mua Hàng</Link></li>
                   {isAdmin && <li><Link className="dropdown-item" to="/admin" onClick={closeNavbar}><i className="bi bi-shield-lock me-2" />Quản Trị Admin</Link></li>}
                   {isShipper && <li><Link className="dropdown-item" to="/shipper" onClick={closeNavbar}><i className="bi bi-truck me-2" />Giao Hàng</Link></li>}
                   {isWaiter && <li><Link className="dropdown-item" to="/waiter" onClick={closeNavbar}><i className="bi bi-person-badge me-2" />Bồi Bàn</Link></li>}

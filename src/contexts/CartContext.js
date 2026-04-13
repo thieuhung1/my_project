@@ -13,16 +13,22 @@ const CART_KEY_PREFIX = 'foodhub_cart';
 const cartReducer = (state, action) => {
   switch (action.type) {
     case 'ADD_TO_CART': {
-      const existing = state.find((item) => item.id === action.payload.id);
-      const stock = action.payload.stock ?? 999;
+      // Handle both { product, quantity } and legacy product-only payloads
+      const product = action.payload.product || action.payload;
+      const quantity = action.payload.quantity ?? 1;
+      
+      const existing = state.find((item) => item.id === product.id);
+      const stock = product.stock ?? 999;
+      
       if (existing) {
-        if (existing.quantity >= stock) {
+        const newQuantity = existing.quantity + quantity;
+        if (newQuantity > stock) {
           alert('Rất tiếc, sản phẩm này đã hết hàng hoặc đạt giới hạn kho!');
           return state;
         }
-        return state.map((item) => item.id === action.payload.id ? { ...item, quantity: item.quantity + 1 } : item);
+        return state.map((item) => item.id === product.id ? { ...item, quantity: newQuantity } : item);
       }
-      return [...state, { ...action.payload, quantity: 1 }];
+      return [...state, { ...product, quantity }];
     }
     case 'REMOVE_FROM_CART': return state.filter((item) => item.id !== action.payload.id);
     case 'UPDATE_QUANTITY': return state.map(i => i.id === action.payload.id ? {...i, quantity: action.payload.quantity} : i);
@@ -69,9 +75,9 @@ export const CartProvider = ({ children }) => {
     baseDispatch(action); return true;
   }, [user]);
 
-  const addToCart = useCallback((product) => {
+  const addToCart = useCallback((product, quantity = 1) => {
     if (!user) { alert('Vui lòng đăng nhập để thêm vào giỏ hàng!'); return false; }
-    baseDispatch({ type: 'ADD_TO_CART', payload: product }); return true;
+    baseDispatch({ type: 'ADD_TO_CART', payload: { product, quantity } }); return true;
   }, [user]);
 
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -112,9 +118,7 @@ export const CartProvider = ({ children }) => {
       orderData.discountAmount = coupon.discountAmount; orderData.totalAmount = subtotal - coupon.discountAmount;
     } else { orderData.totalAmount = subtotal; }
     const orderId = await createOrder(orderData);
-    baseDispatch({ type: 'CLEAR_CART' });
-    setAppliedCoupon(null);
-    return orderId;
+    baseDispatch({ type: 'CLEAR_CART' }); return orderId;
   };
 
   const finalTotal = appliedCoupon ? (subtotal - appliedCoupon.discountAmount) : subtotal;

@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { Link } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const Skeleton = () => (
   <div className="col-md-4 mb-4">
@@ -17,41 +18,53 @@ const Skeleton = () => (
 
 const MyList = () => {
   const { products, loading } = useProducts();
+  const { userProfile } = useAuth();
+
+  const favoriteProducts = products.filter(p => userProfile?.favorites?.includes(p.id));
 
   return (
     <div className="container my-5 animate__animated animate__fadeIn">
-      <div className="d-flex align-items-end justify-content-between mb-3">
+      <div className="d-flex align-items-end justify-content-between mb-4">
         <div>
-          <h1 className="fw-bold m-0">Danh sách yêu thích</h1>
-          <p className="text-muted m-0">Các món bạn đã thả tim (demo: hiển thị tất cả sản phẩm)</p>
+          <h1 className="fw-bold m-0">Danh Sách Yêu Thích</h1>
+          <p className="text-muted m-0">Các món bạn đã thả tim để đặt lại sau</p>
         </div>
       </div>
 
       <div className="row">
         {loading
           ? Array.from({length:6}).map((_,i)=><Skeleton key={i}/>)
-          : products.map(product => (
+          : favoriteProducts.length > 0 ? favoriteProducts.map(product => (
             <div key={product.id} className="col-md-4 mb-4">
               <div className="card product-card h-100 shadow-sm border-0 hover-lift">
-                <img
-                  src={product.imageUrl || product.image || '/ASSETS/Images/placeholder.jpg'}
-                  className="card-img-top product-card__image"
-                  alt={product.name}
-                  loading="lazy"
-                  style={{height:220, objectFit:'cover'}}
-                  onError={(e)=>{e.currentTarget.src='/ASSETS/Images/placeholder.jpg'}}
-                />
+                <div className="position-relative overflow-hidden">
+                  <img
+                    src={product.imageUrl || product.image || '/ASSETS/Images/placeholder.jpg'}
+                    className="card-img-top product-card__image"
+                    alt={product.name}
+                    loading="lazy"
+                    style={{height:220, objectFit:'cover'}}
+                    onError={(e)=>{e.currentTarget.src='/ASSETS/Images/placeholder.jpg'}}
+                  />
+                </div>
                 <div className="card-body product-card__body d-flex flex-column">
                   <h5 className="fw-bold mb-2 text-truncate">{product.name}</h5>
                   <div className="mt-auto d-flex gap-2">
-                    <Link to={`/product/${product.id}`} className="btn btn-warning btn-sm">
-                      <i className="bi bi-eye me-1" /> Xem
+                    <Link to={`/product/${product.id}`} className="btn btn-warning btn-sm flex-grow-1">
+                      <i className="bi bi-eye me-1" /> Xem Chi Tiết
                     </Link>
                   </div>
                 </div>
               </div>
             </div>
-          ))}
+          )) : (
+            <div className="col-12 text-center py-5">
+              <div className="display-4 mb-3">❤️</div>
+              <h5>Danh sách yêu thích trống</h5>
+              <p className="text-muted">Hãy thêm món ăn bạn thích vào đây nhé!</p>
+              <Link to="/products" className="btn btn-warning">Khám phá ngay</Link>
+            </div>
+          )}
       </div>
     </div>
   );

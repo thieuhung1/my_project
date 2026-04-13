@@ -50,6 +50,8 @@ export {
   getAllUsers,
   updateUserRole,
   getUsersByRole,
+  toggleFavorite,
+  getFavorites,
 } from "./services/userService";
 
 // --- Storage Service ---

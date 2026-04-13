@@ -2,7 +2,7 @@ import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
-const ProtectedRoute = ({ allowedRoles }) => {
+const ProtectedRoute = ({ children, allowedRoles }) => {
   const { userProfile, isAuthenticated, loading } = useAuth();
 
   if (loading) {
@@ -27,8 +27,8 @@ const ProtectedRoute = ({ allowedRoles }) => {
     return <Navigate to="/" replace />;
   }
 
-  // Hợp lệ thì cho phép render component con (thông qua Outlet)
-  return <Outlet />;
+  // Hợp lệ thì cho phép render component con
+  return children ? children : <Outlet />;
 };
 
 export default ProtectedRoute;

@@ -82,22 +82,23 @@ export default function OrderManager() {
                   <tr key={order.id}>
                     <td><small className="text-muted">{order.id.substring(0, 8)}</small></td>
                     <td>
-                      <strong>{order.customerName}</strong><br />
+                      <strong>{order.userName || order.customerName}</strong><br />
                       <small className="text-muted">{order.phone}</small>
                     </td>
                     <td className="text-danger fw-bold">{order.totalAmount?.toLocaleString()}đ</td>
                     <td>
                       <span className={`status-badge ${order.status}`}>
-                        {order.status === 'pending' ? 'Chờ xác nhận' :
-                          order.status === 'confirmed' ? 'Đã xác nhận' :
-                            order.status === 'delivering' ? 'Đang giao' :
-                              order.status === 'delivered' ? 'Đã giao' :
-                                order.status === 'cancelled' ? 'Đã hủy' :
-                                  order.status === 'failed' ? 'Giao thất bại' : order.status}
+                        {order.status === 'PENDING' ? 'Chờ xử lý' :
+                          order.status === 'WAITING_FOR_SHIPPER' ? 'Chờ shipper' :
+                            order.status === 'CONFIRMED' ? 'Đã xác nhận' :
+                              order.status === 'DELIVERING' ? 'Đang giao' :
+                                order.status === 'COMPLETED' ? 'Hoàn thành' :
+                                  order.status === 'CANCELLED' ? 'Đã hủy' :
+                                    order.status === 'FAILED' ? 'Thất bại' : order.status}
                       </span>
                     </td>
                     <td>
-                      {order.status !== 'delivered' && order.status !== 'cancelled' ? (
+                      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && order.status !== 'FAILED' ? (
                         <select
                           className="form-select form-select-sm"
                           value={order.shipperId || ''}
@@ -116,13 +117,13 @@ export default function OrderManager() {
                       )}
                     </td>
                     <td>
-                      {order.status === 'pending' && (
-                        <button className="btn btn-sm btn-outline-success action-btn me-2" onClick={() => handleUpdateOrderStatus(order.id, 'confirmed')}>
+                      {(order.status === 'PENDING' || order.status === 'WAITING_FOR_SHIPPER') && (
+                        <button className="btn btn-sm btn-outline-success action-btn me-2" onClick={() => handleUpdateOrderStatus(order.id, 'CONFIRMED')}>
                           Xác nhận
                         </button>
                       )}
-                      {order.status !== 'cancelled' && order.status !== 'delivered' && (
-                        <button className="btn btn-sm btn-outline-danger action-btn" onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}>
+                      {order.status !== 'CANCELLED' && order.status !== 'COMPLETED' && order.status !== 'FAILED' && (
+                        <button className="btn btn-sm btn-outline-danger action-btn" onClick={() => handleUpdateOrderStatus(order.id, 'CANCELLED')}>
                           Huỷ
                         </button>
                       )}

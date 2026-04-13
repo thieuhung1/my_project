@@ -16,6 +16,7 @@ import SignIn        from './Pages/SignIn/Index';
 import SignUp        from './Pages/SignUp/Index';
 import MyList        from './Pages/MyList/Index';
 import Orders        from './Pages/Orders/Index';
+import MyOrders       from './Pages/MyOrders/Index';
 import Search        from './Pages/Search/Index';
 import MyAccount     from './Pages/MyAccount/Index';
 import Contact       from './Pages/Contact/Index';
@@ -68,6 +69,11 @@ function App() {
               <Route path="/signup"      element={<SignUp />} />
               <Route path="/my-list"     element={<MyList />} />
               <Route path="/orders"      element={<Orders />} />
+              <Route path="/my-orders"   element={
+                <ProtectedRoute>
+                  <MyOrders />
+                </ProtectedRoute>
+              } />
               <Route path="/search"      element={<Search />} />
               <Route path="/my-account"  element={<MyAccount />} />
               <Route path="/contact"     element={<Contact />} />

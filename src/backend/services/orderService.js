@@ -5,7 +5,6 @@
 import {
   collection,
   doc,
-  addDoc,
   getDoc,
   getDocs,
   updateDoc,
@@ -147,7 +146,7 @@ export const assignOrderToShipper = async (orderId, shipperId, shipperName) => {
   await updateDoc(docRef, {
     shipperId,
     shipperName: shipperName || '',
-    status: "confirmed",
+    status: ORDER_STATUS.CONFIRMED,
     updatedAt: serverTimestamp(),
   });
 };
