@@ -301,3 +301,16 @@ main {
 .shadow-orange {
   box-shadow: var(--shadow-md);
 }
+
+/* Review styles */
+.reviews-list .border-bottom {
+  transition: var(--transition);
+}
+
+.reviews-list .border-bottom:hover {
+  background: var(--gray-light);
+}
+
+.reviews-list .bi-star-fill {
+  filter: drop-shadow(0 0 2px rgba(255, 193, 7, 0.5));
+}

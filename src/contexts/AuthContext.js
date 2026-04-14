@@ -36,7 +36,22 @@ export const AuthProvider = ({ children }) => {
           const profile = await getUserProfile(firebaseUser.uid);
           setUserProfile(profile);
         } catch {
-          setUserProfile(null);
+          // Default profile if one does not exist (useful for returning from Google SignIn Redirect)
+          try {
+             await createUserProfile(firebaseUser.uid, {
+               displayName: firebaseUser.displayName || 'Thành viên',
+               email: firebaseUser.email || '',
+               phone: firebaseUser.phoneNumber || '',
+               photoURL: firebaseUser.photoURL || '',
+               address: '',
+               role: 'customer',
+             });
+             const newProfile = await getUserProfile(firebaseUser.uid);
+             setUserProfile(newProfile);
+          } catch (e) {
+             console.error("Lỗi khởi tạo profile mặc định:", e);
+             setUserProfile(null);
+          }
         }
       } else {
         setUser(null);
@@ -71,24 +86,9 @@ export const AuthProvider = ({ children }) => {
   // ── Đăng nhập bằng Google (Popup) ────────────────────────
   const signInWithGoogle = async () => {
     try {
-      const googleUser = await loginWithGoogle();
-      if (googleUser) {
-        // Tự động tạo profile nếu chưa có
-        try {
-          await getUserProfile(googleUser.uid);
-        } catch {
-          await createUserProfile(googleUser.uid, {
-            displayName: googleUser.displayName || 'Thành viên',
-            email: googleUser.email,
-            phone: googleUser.phoneNumber || '',
-            photoURL: googleUser.photoURL || '',
-            address: '',
-            role: 'customer',
-          });
-          console.log("Đã tạo hồ sơ Firestore cho người dùng Google mới.");
-        }
-        return googleUser;
-      }
+      await loginWithGoogle();
+      // Quá trình đăng nhập rẽ nhánh, người dùng sẽ được chuyển hướng tới trang đăng nhập của Google.
+      // Profile sẽ được xử lý tại onAuthStateChange khi quay lại web.
     } catch (error) {
       console.error("Lỗi đăng nhập Google:", error);
       throw error;

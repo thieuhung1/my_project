@@ -10,7 +10,8 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
@@ -38,8 +39,11 @@ export const loginWithEmail = async (email, password, remember = true) => {
 // ---- ÄÄƒng nháº­p báº±ng tĂ i khoáº£n Google (Popup) ----
 export const loginWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  const userCredential = await signInWithPopup(auth, provider);
-  return userCredential.user;
+  await signInWithRedirect(auth, provider);
+};
+
+export const checkRedirectResult = async () => {
+  return await getRedirectResult(auth);
 };
 
 // ---- ÄÄƒng xuáº¥t ----

@@ -58,9 +58,6 @@ export default function CouponManager() {
 
   const openEditForm = (cp) => {
     setEditingId(cp.id);
-    
-    // Convert Firestore Timestamp (mặc dù Coupon lấy string date tùy setup)
-    // Giả định validUntil đang lưu dạng yyyy-mm-dd
     setFormData({
       code: cp.code || '',
       discountType: cp.discountType || 'percent',
