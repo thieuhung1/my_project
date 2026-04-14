@@ -12,23 +12,29 @@ import {
 
 const COLORS = ['#6a5cff', '#22c55e', '#ffb15e', '#ff7a7a', '#4ec9ff', '#9b59b6'];
 
+// SVG icons thay cho bootstrap-icons
+const Ico = {
+  cash: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><path d="M6 12H6.01M18 12H18.01"/></svg>,
+  product: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2l9 4-9 4-9-4 9-4z"/><path d="M3 10l9 4 9-4"/><path d="M3 14l9 4 9-4"/></svg>,
+  order: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14h6M9 18h4"/></svg>,
+  users: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+};
+
 function StatCard({ title, value, sub, icon, grad }) {
   return (
     <div className="analysis-card" style={{ padding: 18 }}>
-      <div className="d-flex justify-content-between align-items-center">
+      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
         <div>
-          <div className="text-muted" style={{ fontSize: 13, marginBottom: 4 }}>{title}</div>
-          <div className="fw-bold" style={{ fontSize: 28, lineHeight: 1.1, color: '#0f172a' }}>{value}</div>
-          <div className="small text-muted mt-1">{sub}</div>
+          <div style={{ fontSize: 13, marginBottom: 4, color:'var(--muted)' }}>{title}</div>
+          <div style={{ fontSize: 28, lineHeight: 1.1, fontWeight:800, color: '#0f172a' }}>{value}</div>
+          <div style={{ fontSize:12, color:'var(--muted)', marginTop:6 }}>{sub}</div>
         </div>
-        <div
-          className="d-grid place-items-center text-white"
-          style={{
+        <div style={{
             width: 48, height: 48, borderRadius: 12,
-            background: grad, boxShadow: '0 10px 20px rgba(0,0,0,.12)'
-          }}
-        >
-          <i className={`bi ${icon} fs-5`} />
+            background: grad, display:'grid', placeItems:'center',
+            color:'#fff', boxShadow: '0 10px 20px rgba(0,0,0,.12)'
+          }}>
+          {icon}
         </div>
       </div>
     </div>
@@ -55,12 +61,11 @@ export default function DashboardCharts() {
           getAllCategories()
         ]);
 
-        // Doanh thu: chỉ đơn tiền mặt và không hủy
+        // GIỮ NGUYÊN LOGIC CỦA BẠN
         const revenue = orders
-         .filter(o => o.paymentMethod === 'cash' && o.status!== 'cancelled')
-         .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+        .filter(o => o.paymentMethod === 'cash' && o.status!== 'cancelled')
+        .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
-        // Đếm sản phẩm theo danh mục
         const catMap = {};
         prods.forEach(p => { catMap[p.category] = (catMap[p.category] || 0) + 1; });
         const categoryData = Object.keys(catMap).map(slug => ({
@@ -86,55 +91,26 @@ export default function DashboardCharts() {
 
   if (stats.loading) {
     return (
-      <div className="p-5 text-center">
+      <div className="panel" style={{padding:48, textAlign:'center'}}>
         <div className="spinner-border text-primary" role="status" />
-        <div className="mt-2 text-muted">Đang phân tích dữ liệu...</div>
+        <div style={{marginTop:8, color:'var(--muted)'}}>Đang phân tích dữ liệu...</div>
       </div>
     );
   }
 
   return (
     <div className="grid">
-      {/* Top cards */}
       <div className="top-cards" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-        <StatCard
-          title="Doanh Thu"
-          value={`${stats.totalRevenue.toLocaleString()}đ`}
-          sub="Chỉ tính đơn tiền mặt"
-          icon="bi-cash-coin"
-          grad="linear-gradient(135deg,#22c55e,#7ee787)"
-        />
-        <StatCard
-          title="Sản Phẩm"
-          value={stats.totalProducts}
-          sub="Món đang phục vụ"
-          icon="bi-egg-fried"
-          grad="linear-gradient(135deg,#6a5cff,#8aa4ff)"
-        />
-        <StatCard
-          title="Đơn Hàng"
-          value={stats.totalOrders}
-          sub="Tổng lượt mua"
-          icon="bi-receipt"
-          grad="linear-gradient(135deg,#ffb86b,#ff7a00)"
-        />
-        <StatCard
-          title="Người Dùng"
-          value={stats.totalUsers}
-          sub="Tài khoản đăng ký"
-          icon="bi-people"
-          grad="linear-gradient(135deg,#a78bfa,#7c3aed)"
-        />
+        <StatCard title="Doanh Thu" value={`${stats.totalRevenue.toLocaleString()}đ`} sub="Chỉ tính đơn tiền mặt" icon={Ico.cash} grad="linear-gradient(135deg,#22c55e,#7ee787)" />
+        <StatCard title="Sản Phẩm" value={stats.totalProducts} sub="Món đang phục vụ" icon={Ico.product} grad="linear-gradient(135deg,#6a5cff,#8aa4ff)" />
+        <StatCard title="Đơn Hàng" value={stats.totalOrders} sub="Tổng lượt mua" icon={Ico.order} grad="linear-gradient(135deg,#ffb86b,#ff7a00)" />
+        <StatCard title="Người Dùng" value={stats.totalUsers} sub="Tài khoản đăng ký" icon={Ico.users} grad="linear-gradient(135deg,#a78bfa,#7c3aed)" />
       </div>
 
       <div className="middle" style={{ marginTop: 6 }}>
-        {/* Bar chart */}
         <div className="panel">
           <div className="panel-head">
             <span>Phân Bổ Sản Phẩm Theo Danh Mục</span>
-            <div className="toggle small">
-              <button className="active">Số lượng</button>
-            </div>
           </div>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={stats.categoryData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -153,21 +129,11 @@ export default function DashboardCharts() {
           </ResponsiveContainer>
         </div>
 
-        {/* Pie chart */}
         <div className="panel">
-          <div className="panel-head">
-            <span>Tỷ Lệ Danh Mục Món Ăn</span>
-          </div>
+          <div className="panel-head"><span>Tỷ Lệ Danh Mục Món Ăn</span></div>
           <ResponsiveContainer width="100%" height={300}>
             <PieChart>
-              <Pie
-                data={stats.categoryData}
-                cx="50%" cy="50%"
-                innerRadius={65}
-                outerRadius={105}
-                paddingAngle={4}
-                dataKey="value"
-              >
+              <Pie data={stats.categoryData} cx="50%" cy="50%" innerRadius={65} outerRadius={105} paddingAngle={4} dataKey="value">
                 {stats.categoryData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
