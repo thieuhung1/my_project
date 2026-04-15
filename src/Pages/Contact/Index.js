@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { sendSupportMessage } from '../../backend/services/supportChatService';
-import useAuth from '../../backend/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import { serverTimestamp } from 'firebase/database';
 
 const Contact = () => {

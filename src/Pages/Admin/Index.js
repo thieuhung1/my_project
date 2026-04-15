@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../backend';
+import { useAuth } from '../../contexts/AuthContext';
 import DashboardCharts from './DashboardCharts';
 import ProductManager from './ProductManager';
 import OrderManager from './OrderManager';

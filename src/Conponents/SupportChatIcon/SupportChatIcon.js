@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { subscribeToMessages, sendSupportMessage } from '../../backend/services/supportChatService';
 import { serverTimestamp } from 'firebase/database';
-import useAuth from '../../backend/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import './SupportChat.css';
 
 const SupportChatIcon = () => {

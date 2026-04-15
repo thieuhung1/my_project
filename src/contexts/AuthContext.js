@@ -1,6 +1,6 @@
 // ============================================================
 // AuthContext.js - Context xác thực người dùng (Firebase Auth)
-// Thay thế localStorage bằng Firebase Authentication thật
+// Fixed: PhotoURL length + dynamic import
 // ============================================================
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
@@ -16,18 +16,37 @@ import {
   updateUserProfile,
   toggleFavorite as toggleFavoriteService,
 } from '../backend';
+import { updateProfile } from 'firebase/auth';  // Pre-import fix dynamic issue
 
 const AuthContext = createContext();
 
-// Hook để dùng trong các component
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser]               = useState(null);   // Firebase Auth user
-  const [userProfile, setUserProfile] = useState(null);   // Firestore profile
-  const [loading, setLoading]         = useState(true);   // Đang kiểm tra auth
+  const [user, setUser]               = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading]         = useState(true);
 
-  // ── Lắng nghe trạng thái đăng nhập từ Firebase ──────────
+  // Sanitize profile data for Firebase limits
+  const sanitizeProfileData = (data) => {
+    const { displayName, photoURL, ...rest } = data;
+    
+    let safeDisplayName = displayName ? String(displayName).trim() : 'User';
+    safeDisplayName = safeDisplayName.length > 30 ? safeDisplayName.substring(0, 30) : safeDisplayName;
+    
+    let safePhotoURL = photoURL || '';
+    if (safePhotoURL && safePhotoURL.length > 2048) {
+      console.warn('PhotoURL too long, truncated:', safePhotoURL.length);
+      safePhotoURL = safePhotoURL.substring(0, 2048);
+    }
+    
+    return {
+      displayName: safeDisplayName,
+      photoURL: safePhotoURL,
+      ...rest
+    };
+  };
+
   useEffect(() => {
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
       if (firebaseUser) {
@@ -36,21 +55,20 @@ export const AuthProvider = ({ children }) => {
           const profile = await getUserProfile(firebaseUser.uid);
           setUserProfile(profile);
         } catch {
-          // Default profile if one does not exist (useful for returning from Google SignIn Redirect)
           try {
-             await createUserProfile(firebaseUser.uid, {
-               displayName: firebaseUser.displayName || 'Thành viên',
-               email: firebaseUser.email || '',
-               phone: firebaseUser.phoneNumber || '',
-               photoURL: firebaseUser.photoURL || '',
-               address: '',
-               role: 'customer',
-             });
-             const newProfile = await getUserProfile(firebaseUser.uid);
-             setUserProfile(newProfile);
+            await createUserProfile(firebaseUser.uid, {
+              displayName: sanitizeProfileData({ displayName: firebaseUser.displayName }).displayName,
+              email: firebaseUser.email || '',
+              phone: firebaseUser.phoneNumber || '',
+              photoURL: sanitizeProfileData({ photoURL: firebaseUser.photoURL }).photoURL,
+              address: '',
+              role: 'customer',
+            });
+            const newProfile = await getUserProfile(firebaseUser.uid);
+            setUserProfile(newProfile);
           } catch (e) {
-             console.error("Lỗi khởi tạo profile mặc định:", e);
-             setUserProfile(null);
+            console.error("Lỗi khởi tạo profile:", e);
+            setUserProfile(null);
           }
         }
       } else {
@@ -62,10 +80,8 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // ── Đăng ký tài khoản mới ───────────────────────────────
   const signUp = async (email, password, displayName) => {
     const newUser = await registerWithEmail(email, password, displayName);
-    // Tạo hồ sơ người dùng trong Firestore
     await createUserProfile(newUser.uid, {
       displayName,
       email,
@@ -77,63 +93,55 @@ export const AuthProvider = ({ children }) => {
     return newUser;
   };
 
-  // ── Đăng nhập bằng email ─────────────────────────────────
   const signIn = async (email, password, options = {}) => {
     const { remember = true } = options;
     return await loginWithEmail(email, password, remember);
   };
 
-  // ── Đăng nhập bằng Google (Popup) ────────────────────────
   const signInWithGoogle = async () => {
     try {
       await loginWithGoogle();
-      // Quá trình đăng nhập rẽ nhánh, người dùng sẽ được chuyển hướng tới trang đăng nhập của Google.
-      // Profile sẽ được xử lý tại onAuthStateChange khi quay lại web.
     } catch (error) {
       console.error("Lỗi đăng nhập Google:", error);
       throw error;
     }
   };
 
-  // ── Đăng xuất ────────────────────────────────────────────
   const signOut = async () => {
     await logout();
   };
 
-  // ── Quên mật khẩu ────────────────────────────────────────
   const forgotPassword = async (email) => {
     await resetPassword(email);
   };
 
-  // ── Cập nhật thông tin hồ sơ người dùng ─────────────
   const updateUser = async (updatedData) => {
     if (!user) return;
     
-    // 1. Cập nhật Firestore
     await updateUserProfile(user.uid, updatedData);
     
-    // 2. Đồng bộ với Firebase Auth Profile (nếu có đổi tên hoặc ảnh)
     const { displayName, photoURL } = updatedData;
-    if (displayName || photoURL) {
-      const { updateProfile } = await import('firebase/auth');
-      await updateProfile(user, { 
-        displayName: displayName || user.displayName, 
-        photoURL: photoURL || user.photoURL 
-      });
+    if (displayName !== undefined || photoURL !== undefined) {
+      try {
+        const safeData = sanitizeProfileData({ 
+          displayName: displayName !== undefined ? displayName : user.displayName,
+          photoURL: photoURL !== undefined ? photoURL : user.photoURL 
+        });
+        await updateProfile(user, safeData);
+      } catch (error) {
+        console.warn('Auth profile update failed:', error.message);
+      }
     }
 
-    // 3. Cập nhật lại local state
     const newProfile = await getUserProfile(user.uid);
     setUserProfile(newProfile);
-    setUser({ ...user }); // Kích hoạt re-render để cập nhật auth user object
+    setUser({ ...user });
   };
 
   const toggleFavorite = async (productId) => {
-    if (!user) throw new Error('Vui lòng đăng nhập để thực hiện tính năng này!');
+    if (!user) throw new Error('Vui lòng đăng nhập!');
     const isFavorite = userProfile?.favorites?.includes(productId);
     await toggleFavoriteService(user.uid, productId, !isFavorite);
-    
-    // Cập nhật state local
     const newProfile = await getUserProfile(user.uid);
     setUserProfile(newProfile);
   };
@@ -162,8 +170,8 @@ export const AuthProvider = ({ children }) => {
 
   return (
     <AuthContext.Provider value={value}>
-      {/* Không render app cho đến khi xác nhận xong trạng thái auth */}
       {!loading && children}
     </AuthContext.Provider>
   );
 };
+

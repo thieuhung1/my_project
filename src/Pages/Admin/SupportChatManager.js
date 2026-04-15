@@ -6,7 +6,7 @@ import {
   markChatAsRead 
 } from '../../backend/services/supportChatService';
 import { serverTimestamp } from 'firebase/database';
-import useAuth from '../../backend/hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 
 const SupportChatManager = () => {
   const [chats, setChats] = useState([]);

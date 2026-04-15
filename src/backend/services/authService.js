@@ -1,5 +1,5 @@
 // ============================================================
-// authService.js - Dá»‹ch vá»¥ xĂ¡c thá»±c ngÆ°á»i dĂ¹ng (Firebase Auth)
+// authService.js - Dịch vụ xác thực người dùng (Firebase Auth)
 // ============================================================
 
 import {
@@ -10,25 +10,34 @@ import {
   updateProfile,
   sendPasswordResetEmail,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   setPersistence,
   browserLocalPersistence,
   browserSessionPersistence,
 } from "firebase/auth";
 import { auth } from "../firebase/firebaseConfig";
 
-// ---- ÄÄƒng kĂ½ tĂ i khoáº£n má»›i báº±ng email & máº­t kháº©u ----
+// ---- Đăng ký tài khoản mới bằng email & mật khẩu ----
 export const registerWithEmail = async (email, password, displayName) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-  // Cáº­p nháº­t tĂªn hiá»ƒn thá»‹ sau khi Ä‘Äƒng kĂ½
-  await updateProfile(userCredential.user, { displayName });
+  
+  // Validate and safely update displayName (fix 400 error)
+  const safeDisplayName = (displayName || 'User').trim();
+  if (safeDisplayName.length > 0 && safeDisplayName.length <= 30) {
+    try {
+      await updateProfile(userCredential.user, { displayName: safeDisplayName });
+    } catch (error) {
+      console.warn('Failed to update displayName:', error.message);
+      // Don't throw, auth succeeded
+    }
+  }
+  
   return userCredential.user;
 };
 
-// ---- ÄÄƒng nháº­p báº±ng email & máº­t kháº©u (cĂ³ tuá»³ chá»n ghi nhá»›) ----
+// ---- Đăng nhập bằng email & mật khẩu (có tùy chọn ghi nhớ) ----
 export const loginWithEmail = async (email, password, remember = true) => {
-  // Thiáº¿t láº­p má»©c Ä‘á»™ ghi nhá»› phiĂªn báº£n Ä‘Äƒng nháº­p
+  // Thiết lập mức độ ghi nhớ phiên đăng nhập
   const persistence = remember ? browserLocalPersistence : browserSessionPersistence;
   await setPersistence(auth, persistence);
   
@@ -36,32 +45,32 @@ export const loginWithEmail = async (email, password, remember = true) => {
   return userCredential.user;
 };
 
-// ---- ÄÄƒng nháº­p báº±ng tĂ i khoáº£n Google (Popup) ----
+// ---- Đăng nhập bằng tài khoản Google (Popup - better UX) ----
 export const loginWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  await signInWithRedirect(auth, provider);
+  provider.setCustomParameters({ 
+    prompt: 'select_account' 
+  });
+  const result = await signInWithPopup(auth, provider);
+  return result.user;
 };
 
-export const checkRedirectResult = async () => {
-  return await getRedirectResult(auth);
-};
-
-// ---- ÄÄƒng xuáº¥t ----
+// ---- Đăng xuất ----
 export const logout = async () => {
   await signOut(auth);
 };
 
-// ---- Gá»­i email Ä‘áº·t láº¡i máº­t kháº©u ----
+// ---- Gửi email đặt lại mật khẩu ----
 export const resetPassword = async (email) => {
   await sendPasswordResetEmail(auth, email);
 };
 
-// ---- Láº¯ng nghe tráº¡ng thĂ¡i Ä‘Äƒng nháº­p cá»§a ngÆ°á»i dĂ¹ng ----
+// ---- Lắng nghe trạng thái đăng nhập của người dùng ----
 export const onAuthStateChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
 
-// ---- Láº¥y ngÆ°á»i dĂ¹ng hiá»‡n táº¡i ----
+// ---- Lấy người dùng hiện tại ----
 export const getCurrentUser = () => {
   return auth.currentUser;
 };
