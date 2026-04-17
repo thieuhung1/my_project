@@ -31,6 +31,8 @@ export {
   deleteProduct,
 } from "./services/productService";
 
+export { mapDocs, buildTimestamps } from "./services/firestoreHelpers";
+
 // --- Order Service ---
 export {
   createOrder,

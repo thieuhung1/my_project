@@ -16,95 +16,109 @@ import {
   updateUserProfile,
   toggleFavorite as toggleFavoriteService,
 } from '../backend';
-import { updateProfile } from 'firebase/auth';  // Pre-import fix dynamic issue
+import { updateProfile } from 'firebase/auth';
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser]               = useState(null);
-  const [userProfile, setUserProfile] = useState(null);
-  const [loading, setLoading]         = useState(true);
+const DEFAULT_ROLE = 'customer';
+const MAX_DISPLAY_NAME_LENGTH = 30;
+const MAX_PHOTO_URL_LENGTH = 2048;
 
-  // Sanitize profile data for Firebase limits
-  const sanitizeProfileData = (data) => {
-    const { displayName, photoURL, ...rest } = data;
-    
-    let safeDisplayName = displayName ? String(displayName).trim() : 'User';
-    safeDisplayName = safeDisplayName.length > 30 ? safeDisplayName.substring(0, 30) : safeDisplayName;
-    
-    let safePhotoURL = photoURL || '';
-    if (safePhotoURL && safePhotoURL.length > 2048) {
-      console.warn('PhotoURL too long, truncated:', safePhotoURL.length);
-      safePhotoURL = safePhotoURL.substring(0, 2048);
-    }
-    
-    return {
-      displayName: safeDisplayName,
-      photoURL: safePhotoURL,
-      ...rest
-    };
+// Chuẩn hoá dữ liệu profile để tránh vượt giới hạn Firebase.
+const sanitizeProfileData = (data = {}) => {
+  const { displayName, photoURL, ...rest } = data;
+
+  let safeDisplayName = displayName ? String(displayName).trim() : 'User';
+  if (safeDisplayName.length > MAX_DISPLAY_NAME_LENGTH) {
+    safeDisplayName = safeDisplayName.slice(0, MAX_DISPLAY_NAME_LENGTH);
+  }
+
+  let safePhotoURL = photoURL || '';
+  if (safePhotoURL.length > MAX_PHOTO_URL_LENGTH) {
+    console.warn('PhotoURL too long, truncated:', safePhotoURL.length);
+    safePhotoURL = safePhotoURL.slice(0, MAX_PHOTO_URL_LENGTH);
+  }
+
+  return {
+    ...rest,
+    displayName: safeDisplayName,
+    photoURL: safePhotoURL,
   };
+};
+
+// Tạo profile mặc định khi user vừa đăng nhập nhưng chưa có profile Firestore.
+const createDefaultProfile = async (firebaseUser) => {
+  await createUserProfile(firebaseUser.uid, {
+    displayName: sanitizeProfileData({ displayName: firebaseUser.displayName }).displayName,
+    email: firebaseUser.email || '',
+    phone: firebaseUser.phoneNumber || '',
+    photoURL: sanitizeProfileData({ photoURL: firebaseUser.photoURL }).photoURL,
+    address: '',
+    role: DEFAULT_ROLE,
+  });
+
+  return getUserProfile(firebaseUser.uid);
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Lắng nghe trạng thái đăng nhập một lần để đồng bộ auth + profile.
     const unsubscribe = onAuthStateChange(async (firebaseUser) => {
-      if (firebaseUser) {
+      try {
+        if (!firebaseUser) {
+          setUser(null);
+          setUserProfile(null);
+          return;
+        }
+
         setUser(firebaseUser);
+
         try {
           const profile = await getUserProfile(firebaseUser.uid);
           setUserProfile(profile);
         } catch {
-          try {
-            await createUserProfile(firebaseUser.uid, {
-              displayName: sanitizeProfileData({ displayName: firebaseUser.displayName }).displayName,
-              email: firebaseUser.email || '',
-              phone: firebaseUser.phoneNumber || '',
-              photoURL: sanitizeProfileData({ photoURL: firebaseUser.photoURL }).photoURL,
-              address: '',
-              role: 'customer',
-            });
-            const newProfile = await getUserProfile(firebaseUser.uid);
-            setUserProfile(newProfile);
-          } catch (e) {
-            console.error("Lỗi khởi tạo profile:", e);
-            setUserProfile(null);
-          }
+          const newProfile = await createDefaultProfile(firebaseUser);
+          setUserProfile(newProfile);
         }
-      } else {
-        setUser(null);
+      } catch (error) {
+        console.error('Lỗi khởi tạo auth state:', error);
         setUserProfile(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
   const signUp = async (email, password, displayName) => {
     const newUser = await registerWithEmail(email, password, displayName);
+
     await createUserProfile(newUser.uid, {
       displayName,
       email,
       phone: '',
       photoURL: '',
       address: '',
-      role: 'customer',
+      role: DEFAULT_ROLE,
     });
+
     return newUser;
   };
 
   const signIn = async (email, password, options = {}) => {
     const { remember = true } = options;
-    return await loginWithEmail(email, password, remember);
+    return loginWithEmail(email, password, remember);
   };
 
   const signInWithGoogle = async () => {
-    try {
-      await loginWithGoogle();
-    } catch (error) {
-      console.error("Lỗi đăng nhập Google:", error);
-      throw error;
-    }
+    await loginWithGoogle();
   };
 
   const signOut = async () => {
@@ -117,15 +131,18 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = async (updatedData) => {
     if (!user) return;
-    
+
     await updateUserProfile(user.uid, updatedData);
-    
+
     const { displayName, photoURL } = updatedData;
-    if (displayName !== undefined || photoURL !== undefined) {
+    const shouldSyncAuthProfile = displayName !== undefined || photoURL !== undefined;
+
+    if (shouldSyncAuthProfile) {
       try {
-        const safeData = sanitizeProfileData({ 
-          displayName: displayName !== undefined ? displayName : user.displayName,
-          photoURL: photoURL !== undefined ? photoURL : user.photoURL 
+        // Chỉ sync phần auth profile khi có thay đổi tên/ảnh.
+        const safeData = sanitizeProfileData({
+          displayName: displayName ?? user.displayName,
+          photoURL: photoURL ?? user.photoURL,
         });
         await updateProfile(user, safeData);
       } catch (error) {
@@ -140,25 +157,22 @@ export const AuthProvider = ({ children }) => {
 
   const toggleFavorite = async (productId) => {
     if (!user) throw new Error('Vui lòng đăng nhập!');
+
     const isFavorite = userProfile?.favorites?.includes(productId);
     await toggleFavoriteService(user.uid, productId, !isFavorite);
+
     const newProfile = await getUserProfile(user.uid);
     setUserProfile(newProfile);
   };
-
-  const isAdmin = userProfile?.role === 'admin';
-  const isShipper = userProfile?.role === 'staff';
-  const isWaiter = userProfile?.role === 'waiter';
-  const isAuthenticated = !!user;
 
   const value = {
     user,
     userProfile,
     loading,
-    isAuthenticated,
-    isAdmin,
-    isShipper,
-    isWaiter,
+    isAuthenticated: !!user,
+    isAdmin: userProfile?.role === 'admin',
+    isShipper: userProfile?.role === 'staff',
+    isWaiter: userProfile?.role === 'waiter',
     signUp,
     signIn,
     signInWithGoogle,

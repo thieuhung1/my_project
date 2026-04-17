@@ -37,19 +37,19 @@ const Footer = () => {
             <h6 className="text-uppercase fw-bold mb-3">Khám phá</h6>
             <ul className="list-unstyled m-0 d-grid gap-2">
               <li><Link to="/products" className="link-light text-decoration-none opacity-75 hover-opacity-100">Thực đơn</Link></li>
-              <li><Link to="/promo" className="link-light text-decoration-none opacity-75">Khuyến mãi</Link></li>
-              <li><Link to="/orders" className="link-light text-decoration-none opacity-75">Theo dõi đơn</Link></li>
-              <li><Link to="/contact" className="link-light text-decoration-none opacity-75">Liên hệ</Link></li>
+              <li><Link to="/promo" className="link-light text-decoration-none opacity-75 hover-opacity-100">Khuyến mãi</Link></li>
+              <li><Link to="/orders" className="link-light text-decoration-none opacity-75 hover-opacity-100">Theo dõi đơn</Link></li>
+              <li><Link to="/contact" className="link-light text-decoration-none opacity-75 hover-opacity-100">Liên hệ</Link></li>
             </ul>
           </div>
 
           <div className="col-6 col-md-3">
             <h6 className="text-uppercase fw-bold mb-3">Hỗ trợ</h6>
             <ul className="list-unstyled m-0 d-grid gap-2">
-              <li><Link to="/help" className="link-light text-decoration-none opacity-75">Trung tâm trợ giúp</Link></li>
-              <li><Link to="/shipping" className="link-light text-decoration-none opacity-75">Phí &amp; thời gian giao</Link></li>
-              <li><Link to="/privacy" className="link-light text-decoration-none opacity-75">Chính sách bảo mật</Link></li>
-              <li><Link to="/terms" className="link-light text-decoration-none opacity-75">Điều khoản</Link></li>
+              <li><Link to="/help" className="link-light text-decoration-none opacity-75 hover-opacity-100">Trung tâm trợ giúp</Link></li>
+              <li><Link to="/shipping" className="link-light text-decoration-none opacity-75 hover-opacity-100">Phí &amp; thời gian giao</Link></li>
+              <li><Link to="/privacy" className="link-light text-decoration-none opacity-75 hover-opacity-100">Chính sách bảo mật</Link></li>
+              <li><Link to="/terms" className="link-light text-decoration-none opacity-75 hover-opacity-100">Điều khoản</Link></li>
             </ul>
           </div>
 
@@ -83,10 +83,10 @@ const Footer = () => {
           <p className="mb-0 text-white-50 small">
             &copy; {year} FoodHub. Tất cả quyền được bảo lưu.
           </p>
-          <div className="d-flex align-items-center gap-2">
-            <i className="bi bi-credit-card text-white-50" />
-            <i className="bi bi-wallet2 text-white-50" />
-            <i className="bi bi-cash-coin text-white-50" />
+          <div className="d-flex align-items-center gap-3">
+            <i className="bi bi-credit-card fs-5 text-white-50" />
+            <i className="bi bi-wallet2 fs-5 text-white-50" />
+            <i className="bi bi-cash-coin fs-5 text-white-50" />
           </div>
         </div>
       </div>

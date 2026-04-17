@@ -1,7 +1,3 @@
-// ============================================================
-// useProducts.js - Custom Hook lấy danh sách sản phẩm
-// ============================================================
-
 import { useState, useEffect, useCallback } from "react";
 import {
   getAllProducts,
@@ -9,11 +5,20 @@ import {
   getFeaturedProducts,
 } from "../services/productService";
 
-/**
- * Hook lấy và lọc sản phẩm từ Firestore
- * @param {string} [category] - Lọc theo danh mục (nếu có)
- * @returns {{ products, loading, error, refetch }}
- */
+// Chọn đúng nguồn dữ liệu theo category để tránh lặp if/else ở nhiều nơi.
+const loadProductsByCategory = (category) => {
+  switch (category) {
+    case "featured":
+      return getFeaturedProducts();
+    case null:
+    case undefined:
+    case "":
+      return getAllProducts();
+    default:
+      return getProductsByCategory(category);
+  }
+};
+
 const useProducts = (category = null) => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -22,18 +27,12 @@ const useProducts = (category = null) => {
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     setError(null);
+
     try {
-      let data;
-      if (category === "featured") {
-        data = await getFeaturedProducts();
-      } else if (category) {
-        data = await getProductsByCategory(category);
-      } else {
-        data = await getAllProducts();
-      }
+      const data = await loadProductsByCategory(category);
       setProducts(data);
     } catch (err) {
-      setError(err.message || "Không thể tải sản phẩm!");
+      setError(err instanceof Error ? err.message : "Không thể tải sản phẩm!");
     } finally {
       setLoading(false);
     }

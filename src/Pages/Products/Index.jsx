@@ -3,7 +3,23 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
 
+// Format tiền theo kiểu Việt Nam để hiển thị đồng nhất.
+const currency = (n) => (typeof n === 'number' ? n.toLocaleString('vi-VN') + '₫' : n);
+
+// Fallback ảnh khi ảnh chính bị lỗi tải.
+const handleImageError = (event) => {
+  event.currentTarget.src = '/ASSETS/Images/placeholder.jpg';
+};
+
 const ITEMS_PER_PAGE = 20;
+
+// Dữ liệu sort để tránh hard-code rải rác trong JSX.
+const SORT_OPTIONS = [
+  { value: 'moinhat', label: 'Mới nhất' },
+  { value: 'gia-thap', label: 'Giá thấp đến cao' },
+  { value: 'gia-cao', label: 'Giá cao đến thấp' },
+  { value: 'ten-az', label: 'Tên A-Z' },
+];
 
 const SkeletonCard = () => (
   <div className="col-xl-3 col-lg-4 col-md-6">
@@ -33,23 +49,27 @@ const Products = () => {
   const [page, setPage] = useState(1);
 
   const categories = useMemo(() => {
-    const set = new Set(products.map(p => p.category).filter(Boolean));
-    return ['Tất cả',...Array.from(set)];
+    const set = new Set(products.map((p) => p.category).filter(Boolean));
+    return ['Tất cả', ...Array.from(set)];
   }, [products]);
 
   const filtered = useMemo(() => {
-    let list = products.filter(p => {
-      const okCat = cat === 'Tất cả' || p.category === cat;
-      const okQ =!q ||
-        p.name.toLowerCase().includes(q.toLowerCase()) ||
-        (p.description || '').toLowerCase().includes(q.toLowerCase());
+    const searchText = q.toLowerCase();
+
+    const list = products.filter((product) => {
+      const okCat = cat === 'Tất cả' || product.category === cat;
+      const okQ =
+        !searchText ||
+        product.name.toLowerCase().includes(searchText) ||
+        (product.description || '').toLowerCase().includes(searchText);
+
       return okCat && okQ;
     });
 
-    // sort
-    if (sort === 'gia-thap') list.sort((a,b) => a.price - b.price);
-    if (sort === 'gia-cao') list.sort((a,b) => b.price - a.price);
-    if (sort === 'ten-az') list.sort((a,b) => a.name.localeCompare(b.name, 'vi'));
+    // Sắp xếp theo lựa chọn hiện tại.
+    if (sort === 'gia-thap') list.sort((a, b) => a.price - b.price);
+    if (sort === 'gia-cao') list.sort((a, b) => b.price - a.price);
+    if (sort === 'ten-az') list.sort((a, b) => a.name.localeCompare(b.name, 'vi'));
 
     return list;
   }, [products, q, cat, sort]);
@@ -66,14 +86,12 @@ const Products = () => {
   const handleAdd = (product) => {
     const ok = addToCart(product);
     if (!ok) {
-      navigate('/login');
+      navigate('/signin');
       return;
     }
-    // toast nhẹ thay vì alert
-    const el = document.createElement('div');
-    el.innerHTML = `<div style="position:fixed;bottom:20px;right:20px;background:var(--success);color:white;padding:12px 20px;border-radius:12px;box-shadow:var(--shadow-md);z-index:9999;font-weight:500">Đã thêm ${product.name}!</div>`;
-    document.body.appendChild(el.firstChild);
-    setTimeout(() => document.body.removeChild(document.body.lastChild), 2000);
+
+    // Dùng alert nhẹ để giữ nguyên luồng hiện tại, tránh phụ thuộc DOM trực tiếp.
+    alert(`Đã thêm ${product.name} vào giỏ hàng!`);
   };
 
   return (
@@ -118,14 +136,14 @@ const Products = () => {
             </div>
             <div className="col-lg-4">
               <div className="d-flex gap-2 flex-wrap">
-                {categories.slice(0,5).map(c => (
+                {categories.slice(0, 5).map((category) => (
                   <button
-                    key={c}
-                    onClick={()=>setCat(c)}
-                    className={`btn btn-sm ${cat===c? 'btn-warning text-white' : 'btn-outline-secondary'} rounded-pill px-3`}
-                    style={{transition:'var(--transition)'}}
+                    key={category}
+                    onClick={() => setCat(category)}
+                    className={`btn btn-sm ${cat === category ? 'btn-warning text-white' : 'btn-outline-secondary'} rounded-pill px-3`}
+                    style={{ transition: 'var(--transition)' }}
                   >
-                    {c}
+                    {category}
                   </button>
                 ))}
                 {categories.length > 5 && (
@@ -142,11 +160,12 @@ const Products = () => {
               </div>
             </div>
             <div className="col-lg-3">
-              <select className="form-select rounded-pill" value={sort} onChange={(e)=>setSort(e.target.value)}>
-                <option value="moinhat">Mới nhất</option>
-                <option value="gia-thap">Giá thấp đến cao</option>
-                <option value="gia-cao">Giá cao đến thấp</option>
-                <option value="ten-az">Tên A-Z</option>
+              <select className="form-select rounded-pill" value={sort} onChange={(e) => setSort(e.target.value)}>
+                {SORT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>

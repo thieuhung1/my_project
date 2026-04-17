@@ -16,6 +16,7 @@ import {
   increment,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import { getDocDataOrThrow, mapDocs } from "./firestoreHelpers";
 
 // Các hằng số trạng thái đơn hàng
 export const ORDER_STATUS = {
@@ -94,8 +95,7 @@ export const updatePaymentStatus = async (orderId, paymentStatus) => {
 export const getOrderById = async (orderId) => {
   const docRef = doc(db, COLLECTION_NAME, orderId);
   const snapshot = await getDoc(docRef);
-  if (!snapshot.exists()) throw new Error("Đơn hàng không tồn tại!");
-  return { id: snapshot.id, ...snapshot.data() };
+  return getDocDataOrThrow(snapshot, "Đơn hàng không tồn tại!");
 };
 
 // ---- Lấy tất cả đơn hàng của một người dùng ----
@@ -106,7 +106,7 @@ export const getOrdersByUser = async (userId) => {
     orderBy("createdAt", "desc")
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return mapDocs(snapshot);
 };
 
 // ---- Lấy tất cả đơn hàng (dành cho Admin) ----
@@ -116,7 +116,7 @@ export const getAllOrders = async () => {
     orderBy("createdAt", "desc")
   );
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return mapDocs(snapshot);
 };
 
 // ---- Cập nhật trạng thái đơn hàng ----

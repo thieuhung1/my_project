@@ -2,6 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
+// Danh sách shortcut dùng trong tài khoản để người dùng vào các khu vực quan trọng nhanh hơn.
+const QUICK_LINKS = [
+  { to: '/my-orders', label: 'Đơn hàng của tôi', icon: 'bi-basket' },
+  { to: '/my-list', label: 'Danh sách yêu thích', icon: 'bi-heart' },
+  { to: '/products', label: 'Tiếp tục mua sắm', icon: 'bi-shop' },
+];
+
 const MyAccount = () => {
   const { userProfile, updateUser, signOut, isAuthenticated } = useAuth();
   const [editMode, setEditMode] = useState(false);
@@ -67,7 +74,7 @@ const MyAccount = () => {
         </div>
 
         <div className="col-md-8">
-          <div className="card shadow-sm border-0">
+          <div className="card shadow-sm border-0 mb-4">
             <div className="card-header bg-white d-flex align-items-center justify-content-between">
               <h5 className="m-0">Thông tin cá nhân {editMode && <span className="text-muted">(chỉnh sửa)</span>}</h5>
               {!editMode ? (
@@ -99,6 +106,28 @@ const MyAccount = () => {
                   <label className="form-label small fw-bold">Địa chỉ</label>
                   <input className="form-control" value={profile.address || ''} onChange={(e) => setProfile({ ...profile, address: e.target.value })} disabled={!editMode} />
                 </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card shadow-sm border-0">
+            <div className="card-header bg-white">
+              <h5 className="m-0">Mở rộng nhanh</h5>
+            </div>
+            <div className="card-body">
+              <div className="row g-3">
+                {QUICK_LINKS.map((item) => (
+                  <div className="col-md-4" key={item.to}>
+                    <Link to={item.to} className="text-decoration-none">
+                      <div className="p-3 rounded-3 border hover-lift h-100">
+                        <div className="d-flex align-items-center gap-2">
+                          <i className={`bi ${item.icon} fs-5 text-warning`} />
+                          <span className="fw-semibold text-dark">{item.label}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

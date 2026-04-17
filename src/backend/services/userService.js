@@ -16,6 +16,7 @@ import {
   arrayRemove,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import { getDocDataOrThrow, mapDocs } from "./firestoreHelpers";
 
 // Tên collection người dùng trong Firestore
 const COLLECTION_NAME = "users";
@@ -25,7 +26,7 @@ export const createUserProfile = async (userId, userData) => {
   const docRef = doc(db, COLLECTION_NAME, userId);
   await setDoc(docRef, {
     ...userData,
-    role: "customer",             // Vai trò mặc định: khách hàng
+    role: "customer", // Vai trò mặc định: khách hàng
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
@@ -35,8 +36,7 @@ export const createUserProfile = async (userId, userData) => {
 export const getUserProfile = async (userId) => {
   const docRef = doc(db, COLLECTION_NAME, userId);
   const snapshot = await getDoc(docRef);
-  if (!snapshot.exists()) throw new Error("Người dùng không tồn tại!");
-  return { id: snapshot.id, ...snapshot.data() };
+  return getDocDataOrThrow(snapshot, "Người dùng không tồn tại!");
 };
 
 // ---- Cập nhật thông tin hồ sơ người dùng ----
@@ -51,7 +51,7 @@ export const updateUserProfile = async (userId, updatedData) => {
 // ---- Lấy tất cả người dùng (dành cho Admin) ----
 export const getAllUsers = async () => {
   const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return mapDocs(snapshot);
 };
 
 // ---- Cập nhật vai trò người dùng ----

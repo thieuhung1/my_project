@@ -12,49 +12,43 @@ import {
   deleteDoc,
   query,
   where,
-  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import { buildTimestamps, getDocDataOrThrow, mapDocs } from "./firestoreHelpers";
 
 const COLLECTION_NAME = "coupons";
 
 // ---- Lấy tất cả mã giảm giá ----
 export const getAllCoupons = async () => {
   const snapshot = await getDocs(collection(db, COLLECTION_NAME));
-  return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  return mapDocs(snapshot);
 };
 
 // ---- Lấy mã giảm giá theo ID ----
 export const getCouponById = async (couponId) => {
   const docRef = doc(db, COLLECTION_NAME, couponId);
   const snapshot = await getDoc(docRef);
-  if (!snapshot.exists()) throw new Error("Mã giảm giá không tồn tại!");
-  return { id: snapshot.id, ...snapshot.data() };
+  return getDocDataOrThrow(snapshot, "Mã giảm giá không tồn tại!");
 };
 
 // ---- Thêm mã giảm giá mới ----
 export const addCoupon = async (couponData) => {
-  const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...couponData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
+  const docRef = await addDoc(
+    collection(db, COLLECTION_NAME),
+    buildTimestamps(couponData, true)
+  );
   return docRef.id;
 };
 
 // ---- Cập nhật mã giảm giá ----
 export const updateCoupon = async (couponId, updatedData) => {
   const docRef = doc(db, COLLECTION_NAME, couponId);
-  await updateDoc(docRef, {
-    ...updatedData,
-    updatedAt: serverTimestamp(),
-  });
+  await updateDoc(docRef, buildTimestamps(updatedData));
 };
 
 // ---- Xóa mã giảm giá ----
 export const deleteCoupon = async (couponId) => {
-  const docRef = doc(db, COLLECTION_NAME, couponId);
-  await deleteDoc(docRef);
+  await deleteDoc(doc(db, COLLECTION_NAME, couponId));
 };
 
 // ---- Kích hoạt/tắt mã giảm giá ----
@@ -71,9 +65,12 @@ export const getCouponByCode = async (code) => {
     where("isActive", "==", true)
   );
   const snapshot = await getDocs(q);
-  if (snapshot.empty) throw new Error("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
-  const doc = snapshot.docs[0];
-  return { id: doc.id, ...doc.data() };
+
+  if (snapshot.empty) {
+    throw new Error("Mã giảm giá không hợp lệ hoặc đã hết hạn!");
+  }
+
+  return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
 };
 
 

@@ -1,13 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { useAuth } from '../../contexts/AuthContext';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
+// Danh sách menu tĩnh của header để render bằng map, tránh lặp JSX.
+const NAV_ITEMS = [
+  { to: '/', label: 'Trang Chủ' },
+  { to: '/products', label: 'Sản Phẩm' },
+  { to: '/about', label: 'Giới Thiệu' },
+  { to: '/contact', label: 'Liên Hệ' },
+];
+
 const Header = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [scrolled, setScrolled] = useState(false);
+  const [isNavbarOpen, setIsNavbarOpen] = useState(false);
   const { cartCount } = useCart();
   const { isAuthenticated, signOut, user, userProfile, isAdmin, isShipper, isWaiter } = useAuth();
   const navigate = useNavigate();
@@ -18,41 +27,49 @@ const Header = () => {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const closeNavbar = () => setIsNavbarOpen(false);
+  const toggleNavbar = () => setIsNavbarOpen((prev) => !prev);
+
+  const handleNavigate = (path) => {
+    closeNavbar();
+    navigate(path);
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
     const q = searchQuery.trim();
-    if (q) {
-      navigate(`/search?q=${encodeURIComponent(q)}`);
-      closeNavbar();
-    }
+    if (!q) return;
+    handleNavigate(`/search?q=${encodeURIComponent(q)}`);
   };
 
   const handleLogout = async () => {
     await signOut();
-    closeNavbar();
-    navigate('/signin');
-  };
-
-  const closeNavbar = () => {
-    const navbarCollapse = document.getElementById('navbarNav');
-    if (navbarCollapse && navbarCollapse.classList.contains('show')) {
-      // Dùng nút toggler để đóng lại một cách tự nhiên nhất
-      const toggler = document.querySelector('.navbar-toggler');
-      if (toggler) {
-        toggler.click();
-      }
-    }
+    handleNavigate('/signin');
   };
 
   const navLinkClass = ({ isActive }) =>
-    'nav-link px-3' + (isActive ? ' active fw-semibold' : '');
+    `nav-link px-3${isActive ? ' active fw-semibold' : ''}`;
+
+  const menuItems = useMemo(() => {
+    if (!isAuthenticated) return [];
+
+    return [
+      { to: '/my-account', label: 'Tài Khoản', icon: 'bi-person' },
+      { to: '/my-orders', label: 'Lịch Sử Mua Hàng', icon: 'bi-basket' },
+      isAdmin && { to: '/admin', label: 'Quản Trị Admin', icon: 'bi-shield-lock' },
+      isShipper && { to: '/shipper', label: 'Giao Hàng', icon: 'bi-truck' },
+      isWaiter && { to: '/waiter', label: 'Bồi Bàn', icon: 'bi-person-badge' },
+    ].filter(Boolean);
+  }, [isAuthenticated, isAdmin, isShipper, isWaiter]);
 
   return (
     <nav
-      className={`navbar navbar-expand-lg navbar-dark fixed-top ${scrolled ? 'shadow-lg' : 'shadow-sm'}`}
+      className={`navbar navbar-expand-lg navbar-dark fixed-top ${scrolled ? 'shadow-lg' : ''}`}
       style={{
-        background: 'linear-gradient(135deg, var(--primary-orange), var(--dark-orange))',
-        backdropFilter: 'saturate(140%) blur(6px)',
+        background: scrolled 
+          ? 'rgba(229, 90, 43, 0.95)' 
+          : 'linear-gradient(135deg, var(--primary-orange), var(--dark-orange))',
+        backdropFilter: 'saturate(180%) blur(10px)',
         transition: 'var(--transition)',
         paddingBlock: scrolled ? '0.5rem' : '0.9rem',
       }}
@@ -66,21 +83,23 @@ const Header = () => {
         <button
           className="navbar-toggler"
           type="button"
-          data-bs-toggle="collapse"
-          data-bs-target="#navbarNav"
           aria-controls="navbarNav"
-          aria-expanded="false"
+          aria-expanded={isNavbarOpen}
           aria-label="Toggle navigation"
+          onClick={toggleNavbar}
         >
           <span className="navbar-toggler-icon" />
         </button>
 
-        <div className="collapse navbar-collapse" id="navbarNav">
+        <div className={`collapse navbar-collapse${isNavbarOpen ? ' show' : ''}`} id="navbarNav">
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
-            <li className="nav-item"><NavLink className={navLinkClass} to="/" onClick={closeNavbar}>Trang Chủ</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/products" onClick={closeNavbar}>Sản Phẩm</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/about" onClick={closeNavbar}>Giới Thiệu</NavLink></li>
-            <li className="nav-item"><NavLink className={navLinkClass} to="/contact" onClick={closeNavbar}>Liên Hệ</NavLink></li>
+            {NAV_ITEMS.map((item) => (
+              <li className="nav-item" key={item.to}>
+                <NavLink className={navLinkClass} to={item.to} onClick={closeNavbar}>
+                  {item.label}
+                </NavLink>
+              </li>
+            ))}
           </ul>
 
           <form className="d-flex me-lg-3 my-2 my-lg-0" role="search" onSubmit={handleSearch}>
@@ -126,13 +145,20 @@ const Header = () => {
                   </span>
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end shadow">
-                  <li><Link className="dropdown-item" to="/my-account" onClick={closeNavbar}><i className="bi bi-person me-2" />Tài Khoản</Link></li>
-                  <li><Link className="dropdown-item" to="/my-orders" onClick={closeNavbar}><i className="bi bi-basket me-2" />Lịch Sử Mua Hàng</Link></li>
-                  {isAdmin && <li><Link className="dropdown-item" to="/admin" onClick={closeNavbar}><i className="bi bi-shield-lock me-2" />Quản Trị Admin</Link></li>}
-                  {isShipper && <li><Link className="dropdown-item" to="/shipper" onClick={closeNavbar}><i className="bi bi-truck me-2" />Giao Hàng</Link></li>}
-                  {isWaiter && <li><Link className="dropdown-item" to="/waiter" onClick={closeNavbar}><i className="bi bi-person-badge me-2" />Bồi Bàn</Link></li>}
+                  {menuItems.map((item) => (
+                    <li key={item.to}>
+                      <Link className="dropdown-item" to={item.to} onClick={closeNavbar}>
+                        <i className={`bi ${item.icon} me-2`} />
+                        {item.label}
+                      </Link>
+                    </li>
+                  ))}
                   <li><hr className="dropdown-divider" /></li>
-                  <li><button className="dropdown-item text-danger" onClick={handleLogout}><i className="bi bi-box-arrow-right me-2" />Đăng Xuất</button></li>
+                  <li>
+                    <button className="dropdown-item text-danger" onClick={handleLogout}>
+                      <i className="bi bi-box-arrow-right me-2" />Đăng Xuất
+                    </button>
+                  </li>
                 </ul>
               </div>
             ) : (

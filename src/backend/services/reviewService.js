@@ -12,26 +12,25 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   serverTimestamp,
-  increment,
   arrayUnion,
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
+import { mapDocs } from "./firestoreHelpers";
 
 const REVIEW_COLLECTION = "reviews";
 const PRODUCT_COLLECTION = "products";
 
 // ---- Lấy tất cả đánh giá của một sản phẩm ----
 export const getReviewsByProduct = async (productId) => {
-  // Bỏ orderBy tạm thời để tránh lỗi index, sẽ sort sau
+  // Bỏ orderBy để tránh phụ thuộc index, rồi sort lại bằng JS.
   const q = query(
     collection(db, REVIEW_COLLECTION),
     where("productId", "==", productId)
   );
   const snapshot = await getDocs(q);
-  const reviews = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  // Sort theo createdAt desc bằng JS
+  const reviews = mapDocs(snapshot);
+
   return reviews.sort((a, b) => {
     const dateA = a.createdAt?.toDate?.()?.getTime() || 0;
     const dateB = b.createdAt?.toDate?.()?.getTime() || 0;
@@ -43,13 +42,13 @@ export const getReviewsByProduct = async (productId) => {
 export const addReview = async (reviewData) => {
   const { productId, rating } = reviewData;
 
-  // Thêm đánh giá vào collection reviews
+  // Thêm đánh giá vào collection reviews.
   const docRef = await addDoc(collection(db, REVIEW_COLLECTION), {
     ...reviewData,
     createdAt: serverTimestamp(),
   });
 
-  // Cập nhật rating và reviewCount của sản phẩm (bọc try để không ảnh hưởng auth)
+  // Cập nhật rating và reviewCount của sản phẩm nhưng không làm hỏng luồng chính nếu thất bại.
   try {
     const productRef = doc(db, PRODUCT_COLLECTION, productId);
     const productSnap = await getDoc(productRef);
@@ -59,7 +58,7 @@ export const addReview = async (reviewData) => {
       const currentReviewCount = productData.reviewCount || 0;
       const currentRating = productData.rating || 0;
 
-      // Tính lại rating trung bình
+      // Tính lại rating trung bình theo công thức cộng dồn.
       const newReviewCount = currentReviewCount + 1;
       const newRating = ((currentRating * currentReviewCount) + rating) / newReviewCount;
 
@@ -84,14 +83,15 @@ export const deleteReview = async (reviewId) => {
 
 // ---- Kiểm tra người dùng đã đánh giá sản phẩm chưa ----
 export const hasUserReviewed = async (productId, userId) => {
-  // Lấy tất cả reviews của sản phẩm rồi lọc bằng JS để tránh lỗi index
+  // Lấy tất cả reviews của sản phẩm rồi lọc bằng JS để tránh lỗi index.
   const q = query(
     collection(db, REVIEW_COLLECTION),
     where("productId", "==", productId)
   );
   const snapshot = await getDocs(q);
-  const reviews = snapshot.docs.map(doc => doc.data());
-  return reviews.some(r => r.userId === userId);
+  const reviews = mapDocs(snapshot);
+
+  return reviews.some((review) => review.userId === userId);
 };
 
 // ---- Thêm/reply cho đánh giá ----
