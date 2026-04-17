@@ -3,7 +3,7 @@
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useState } from 'react';
-import { createOrder } from '../backend/services/orderService';
+import { createOrder, PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_PROVIDER } from '../backend/services/orderService';
 import { getCouponByCode } from '../backend/services/couponService';
 import { useAuth } from './AuthContext';
 
@@ -95,7 +95,7 @@ export const CartProvider = ({ children }) => {
 
   const clearCoupon = () => setAppliedCoupon(null);
 
-  const checkout = async ({ type = 'DELIVERY', tableId = null, phone, address, paymentMethod = 'COD', note = '', coupon = null }) => {
+  const checkout = async ({ type = 'DELIVERY', tableId = null, phone, address, paymentMethod = PAYMENT_METHOD.COD, note = '', coupon = null }) => {
     if (!user) throw new Error('Vui lòng đăng nhập trước khi thanh toán!');
     if (cart.length === 0) throw new Error('Giỏ hàng trống!');
     const items = cart.map((item) => ({ 
@@ -110,8 +110,14 @@ export const CartProvider = ({ children }) => {
       userName: userProfile?.displayName || user.displayName || 'Khách hàng',
       phone,
       address: type === 'DINE_IN' ? 'Ăn tại quán' : address,
-      items, subtotal, paymentMethod: type === 'DINE_IN' ? 'CASH' : paymentMethod,
-      type, table_id: tableId, note,
+      items,
+      subtotal,
+      paymentMethod: type === 'DINE_IN' ? PAYMENT_METHOD.COD : paymentMethod,
+      paymentStatus: PAYMENT_STATUS.UNPAID,
+      paymentProvider: paymentMethod === PAYMENT_METHOD.VNPAY ? PAYMENT_PROVIDER.VNPAY : PAYMENT_PROVIDER.LOCAL,
+      type,
+      table_id: tableId,
+      note,
     };
     if (coupon) {
       orderData.couponId = coupon.id; orderData.couponCode = coupon.code;

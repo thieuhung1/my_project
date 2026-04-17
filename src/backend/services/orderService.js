@@ -31,7 +31,21 @@ export const ORDER_STATUS = {
 
 export const PAYMENT_STATUS = {
   UNPAID: "UNPAID",
+  PENDING: "PENDING",
   PAID: "PAID",
+  FAILED: "FAILED",
+};
+
+export const PAYMENT_METHOD = {
+  COD: "COD",
+  BANK_QR: "BANK_QR",
+  VNPAY: "VNPAY",
+};
+
+export const PAYMENT_PROVIDER = {
+  VNPAY: "VNPAY",
+  PAYOS: "PAYOS",
+  LOCAL: "LOCAL",
 };
 
 // Schema note: now supports couponId, couponCode, discountAmount, subtotal

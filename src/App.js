@@ -18,6 +18,7 @@ import MyList        from './Pages/MyList/Index';
 import Orders        from './Pages/Orders/Index';
 import MyOrders       from './Pages/MyOrders/Index';
 import Search        from './Pages/Search/Index';
+import Checkout      from './Pages/Checkout/Index';
 import MyAccount     from './Pages/MyAccount/Index';
 import Contact       from './Pages/Contact/Index';
 import About         from './Pages/About/Index';
@@ -75,6 +76,7 @@ function App() {
                 </ProtectedRoute>
               } />
               <Route path="/search"      element={<Search />} />
+              <Route path="/checkout/:orderId" element={<Checkout />} />
               <Route path="/my-account"  element={<MyAccount />} />
               <Route path="/contact"     element={<Contact />} />
               <Route path="/about"       element={<About />} />

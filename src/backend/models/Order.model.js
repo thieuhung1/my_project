@@ -24,8 +24,12 @@
  * @property {number}      discountAmount - Số tiền giảm giá
  * @property {string}      couponId      - ID mã giảm giá (nếu có)
  * @property {string}      couponCode    - Mã giảm giá (nếu có)
- * @property {string}      paymentMethod - Phương thức thanh toán (COD/CASH)
- * @property {string}      paymentStatus - Trạng thái thanh toán (UNPAID/PAID)
+ * @property {string}      paymentMethod - Phương thức thanh toán (COD/CASH/VNPAY/BANK_QR)
+ * @property {string}      paymentStatus - Trạng thái thanh toán (UNPAID/PENDING/PAID/FAILED)
+ * @property {string}      paymentProvider - Nhà cung cấp thanh toán (VNPAY/PAYOS/LOCAL)
+ * @property {string}      paymentRef     - Mã tham chiếu thanh toán
+ * @property {string}      paymentUrl     - Link thanh toán ngoài
+ * @property {string}      paidAt         - Thời điểm thanh toán thành công
  * @property {string}      status        - Trạng thái đơn hàng (UPPERCASE)
  * @property {string}      type          - Loại đơn (DELIVERY/DINE_IN)
  * @property {string}      table_id      - Mã bàn (nếu DINE_IN)
@@ -52,6 +56,10 @@ export const createOrderModel = (overrides = {}) => ({
   discountAmount: 0,
   paymentMethod: "COD",
   paymentStatus: "UNPAID",
+  paymentProvider: "",
+  paymentRef: "",
+  paymentUrl: "",
+  paidAt: null,
   status: "PENDING",
   type: "DELIVERY",
   note: "",
