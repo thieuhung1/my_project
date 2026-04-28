@@ -27,9 +27,7 @@ const useOrders = (userId = null) => {
     try {
       const data = userId ? await getOrdersByUser(userId) : await getAllOrders();
       setOrders(data);
-      console.log('[useOrders DEBUG]', { userId, ordersCount: data.length, firstOrderId: data[0]?.id });
     } catch (err) {
-      console.error('[useOrders ERROR]', err);
       setError(err.message || "Không thể tải đơn hàng!");
     } finally {
       setLoading(false);

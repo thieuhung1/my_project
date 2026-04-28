@@ -12,67 +12,46 @@ import {
 } from 'firebase/database';
 import { rtdb } from '../firebase/firebaseConfig';
 
-// Lấy danh sách chat gần nhất để hiển thị trong admin panel.
-export const getSupportChats = async (limitCount = 50) => {
-  const chatsRef = ref(rtdb, 'supportChats');
-  const q = query(chatsRef, orderByChild('lastMessageTime'), limitToLast(limitCount));
-  const snapshot = await get(q);
+const SUPPORT_CHATS_PATH = 'supportChats';
+const SUPPORT_MESSAGES_PATH = (chatId) => `${SUPPORT_CHATS_PATH}/${chatId}/messages`;
+const SUPPORT_CHAT_PATH = (chatId) => `${SUPPORT_CHATS_PATH}/${chatId}`;
+
+const snapshotToList = (snapshot) => {
   if (!snapshot.exists()) return [];
-
-  const data = snapshot.val();
-  return Object.keys(data)
-    .map((key) => ({ id: key, ...data[key] }))
-    .sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
-};
-
-// Lắng nghe realtime danh sách chat.
-export const subscribeToSupportChats = (callback) => {
-  const chatsRef = ref(rtdb, 'supportChats');
-  const q = query(chatsRef, orderByChild('lastMessageTime'));
-
-  return onValue(q, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback([]);
-      return;
-    }
-
-    const data = snapshot.val();
-    const chatList = Object.keys(data)
-      .map((key) => ({ id: key, ...data[key] }))
-      .sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
-    callback(chatList);
-  });
-};
-
-// Lấy tin nhắn của một cuộc chat.
-export const getChatMessages = async (chatId, limitCount = 100) => {
-  const messagesRef = ref(rtdb, `supportChats/${chatId}/messages`);
-  const q = query(messagesRef, limitToLast(limitCount));
-  const snapshot = await get(q);
-  if (!snapshot.exists()) return [];
-
   const data = snapshot.val();
   return Object.keys(data).map((key) => ({ id: key, ...data[key] }));
 };
 
-// Lắng nghe realtime tin nhắn trong một chat cụ thể.
-export const subscribeToMessages = (chatId, callback) => {
-  const messagesRef = ref(rtdb, `supportChats/${chatId}/messages`);
-  return onValue(messagesRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      callback([]);
-      return;
-    }
+export const getSupportChats = async (limitCount = 50) => {
+  const chatsRef = ref(rtdb, SUPPORT_CHATS_PATH);
+  const q = query(chatsRef, orderByChild('lastMessageTime'), limitToLast(limitCount));
+  const snapshot = await get(q);
+  return snapshotToList(snapshot).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
+};
 
-    const data = snapshot.val();
-    const messageList = Object.keys(data).map((key) => ({ id: key, ...data[key] }));
-    callback(messageList);
+export const subscribeToSupportChats = (callback) => {
+  const chatsRef = ref(rtdb, SUPPORT_CHATS_PATH);
+  const q = query(chatsRef, orderByChild('lastMessageTime'));
+
+  return onValue(q, (snapshot) => {
+    callback(snapshotToList(snapshot).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0)));
   });
 };
 
-// Cập nhật metadata của cuộc chat sau khi có tin nhắn mới.
+export const getChatMessages = async (chatId, limitCount = 100) => {
+  const messagesRef = ref(rtdb, SUPPORT_MESSAGES_PATH(chatId));
+  const q = query(messagesRef, limitToLast(limitCount));
+  const snapshot = await get(q);
+  return snapshotToList(snapshot);
+};
+
+export const subscribeToMessages = (chatId, callback) => {
+  const messagesRef = ref(rtdb, SUPPORT_MESSAGES_PATH(chatId));
+  return onValue(messagesRef, (snapshot) => callback(snapshotToList(snapshot)));
+};
+
 export const updateChatLastMessage = async (chatId, { lastMessage, userName, timestamp }) => {
-  const chatRef = ref(rtdb, `supportChats/${chatId}`);
+  const chatRef = ref(rtdb, SUPPORT_CHAT_PATH(chatId));
   await update(chatRef, {
     lastMessage,
     lastUserName: userName,
@@ -80,11 +59,9 @@ export const updateChatLastMessage = async (chatId, { lastMessage, userName, tim
   });
 };
 
-// Gửi tin nhắn và đồng thời cập nhật metadata cho danh sách chat.
 export const sendSupportMessage = async (chatId, messageData) => {
-  const messagesRef = ref(rtdb, `supportChats/${chatId}/messages`);
+  const messagesRef = ref(rtdb, SUPPORT_MESSAGES_PATH(chatId));
   const newMessageRef = push(messagesRef);
-
   const finalMessageData = {
     ...messageData,
     timestamp: messageData.timestamp || serverTimestamp(),
@@ -92,33 +69,32 @@ export const sendSupportMessage = async (chatId, messageData) => {
 
   await set(newMessageRef, finalMessageData);
 
-  const chatRef = ref(rtdb, `supportChats/${chatId}`);
+  const chatRef = ref(rtdb, SUPPORT_CHAT_PATH(chatId));
   const isAdmin = messageData.direction === 'admin';
-
   const updates = {
     lastMessage: messageData.text,
     lastUserName: messageData.userName,
     lastMessageTime: finalMessageData.timestamp,
-    userName: !isAdmin ? messageData.userName : undefined,
   };
 
-  if (updates.userName === undefined) delete updates.userName;
+  if (!isAdmin) {
+    updates.userName = messageData.userName;
+  }
 
   await update(chatRef, updates);
 
   if (isAdmin) {
     await update(chatRef, { unreadCount: 0 });
   } else if (messageData.direction === 'user') {
-    const snapshot = await get(ref(rtdb, `supportChats/${chatId}/unreadCount`));
-    const currentUnread = snapshot.val() || 0;
+    const unreadSnap = await get(ref(rtdb, `${SUPPORT_CHAT_PATH(chatId)}/unreadCount`));
+    const currentUnread = unreadSnap.val() || 0;
     await update(chatRef, { unreadCount: currentUnread + 1 });
   }
 
   return newMessageRef;
 };
 
-// Đánh dấu chat đã đọc.
 export const markChatAsRead = async (chatId) => {
-  const chatRef = ref(rtdb, `supportChats/${chatId}`);
+  const chatRef = ref(rtdb, SUPPORT_CHAT_PATH(chatId));
   await update(chatRef, { unreadCount: 0 });
 };

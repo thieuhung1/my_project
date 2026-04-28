@@ -1,0 +1,135 @@
+/* ============================================================
+   Checkout.css - Checkout layout FoodHub
+   ============================================================ */
+
+.order-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  position: relative;
+}
+
+.order-progress::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gray-light);
+  z-index: 0;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  z-index: 1;
+}
+
+.progress-step .step-dot {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  border: 3px solid var(--gray-light);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: var(--gray);
+  transition: var(--transition);
+}
+
+.progress-step.active .step-dot,
+.progress-step.completed .step-dot {
+  border-color: var(--primary-orange);
+  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange));
+  color: white;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+}
+
+.progress-step .step-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--gray);
+}
+
+.progress-step.active .step-label,
+.progress-step.completed .step-label {
+  color: var(--primary-orange);
+}
+
+.checkout-summary {
+  position: sticky;
+  top: 100px;
+  background: white;
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.checkout-summary .summary-header {
+  background: linear-gradient(135deg, var(--primary-orange), var(--dark-orange));
+  color: white;
+  padding: 1.25rem;
+  text-align: center;
+}
+
+.checkout-summary .summary-header h5 {
+  margin: 0;
+  font-weight: 700;
+}
+
+.checkout-summary .summary-body {
+  padding: 1.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 0;
+  border-bottom: 1px dashed #e9ecef;
+}
+
+.summary-row:last-child {
+  border-bottom: none;
+}
+
+.summary-row.total {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 2px solid var(--primary-orange);
+  border-bottom: none;
+}
+
+.summary-row.total .amount {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--primary-orange);
+}
+
+@media (max-width: 768px) {
+  .order-progress {
+    padding: 0 0.5rem;
+  }
+
+  .progress-step .step-label {
+    font-size: 0.7rem;
+  }
+
+  .progress-step .step-dot {
+    width: 36px;
+    height: 36px;
+    font-size: 0.9rem;
+  }
+
+  .checkout-summary {
+    position: static;
+    margin-top: 1.5rem;
+  }
+}

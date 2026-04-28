@@ -45,6 +45,21 @@
  * @param {Partial<Order>} overrides
  * @returns {Order}
  */
+export const PAYMENT_METHOD = {
+  COD: "COD",
+};
+
+export const PAYMENT_STATUS = {
+  UNPAID: "UNPAID",
+  PENDING: "PENDING",
+  PAID: "PAID",
+  FAILED: "FAILED",
+};
+
+export const PAYMENT_PROVIDER = {
+  LOCAL: "LOCAL",
+};
+
 export const createOrderModel = (overrides = {}) => ({
   userId: "",
   userName: "",
@@ -54,9 +69,9 @@ export const createOrderModel = (overrides = {}) => ({
   subtotal: 0,
   totalAmount: 0,
   discountAmount: 0,
-  paymentMethod: "COD",
-  paymentStatus: "UNPAID",
-  paymentProvider: "",
+  paymentMethod: PAYMENT_METHOD.COD,
+  paymentStatus: PAYMENT_STATUS.UNPAID,
+  paymentProvider: PAYMENT_PROVIDER.LOCAL,
   paymentRef: "",
   paymentUrl: "",
   paidAt: null,

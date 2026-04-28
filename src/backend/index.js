@@ -1,15 +1,5 @@
-// ============================================================
-// index.js - Điểm xuất tập trung cho toàn bộ backend
-// Dùng để import gọn gàng trong các component React
-//
-// Ví dụ sử dụng:
-//   import { useAuth, getAllProducts, ORDER_STATUS } from '../backend';
-// ============================================================
-
-// --- Firebase Core ---
 export { app, analytics, auth, db, storage, rtdb } from "./firebase/firebaseConfig";
 
-// --- Auth Service ---
 export {
   registerWithEmail,
   loginWithEmail,
@@ -20,7 +10,6 @@ export {
   getCurrentUser,
 } from "./services/authService";
 
-// --- Product Service ---
 export {
   getAllProducts,
   getProductById,
@@ -31,9 +20,8 @@ export {
   deleteProduct,
 } from "./services/productService";
 
-export { mapDocs, buildTimestamps } from "./services/firestoreHelpers";
+export { mapDocs, getDocDataOrThrow, buildTimestamps } from "./services/firestoreHelpers";
 
-// --- Order Service ---
 export {
   createOrder,
   getOrderById,
@@ -42,9 +30,13 @@ export {
   updateOrderStatus,
   getOrdersByShipper,
   assignOrderToShipper,
+  updatePaymentStatus,
+  ORDER_STATUS,
+  PAYMENT_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_PROVIDER,
 } from "./services/orderService";
 
-// --- User Service ---
 export {
   createUserProfile,
   getUserProfile,
@@ -56,7 +48,6 @@ export {
   getFavorites,
 } from "./services/userService";
 
-// --- Storage Service ---
 export {
   uploadProductImage,
   uploadUserAvatar,
@@ -64,7 +55,6 @@ export {
   getFileURL,
 } from "./services/storageService";
 
-// --- Category Service ---
 export {
   getAllCategories,
   getCategoryById,
@@ -73,7 +63,6 @@ export {
   deleteCategory,
 } from "./services/categoryService";
 
-// --- Coupon Service ---
 export {
   getAllCoupons,
   getCouponById,
@@ -81,27 +70,28 @@ export {
   updateCoupon,
   deleteCoupon,
   toggleCouponStatus,
+  getCouponByCode,
 } from "./services/couponService";
 
-// --- Review Service ---
 export {
   getReviewsByProduct,
   addReview,
   deleteReview,
   hasUserReviewed,
+  addReply,
+  deleteReply,
 } from "./services/reviewService";
 
-// --- Support Chat Service ---
 export {
   getSupportChats,
   subscribeToSupportChats,
   getChatMessages,
   subscribeToMessages,
+  updateChatLastMessage,
   sendSupportMessage,
   markChatAsRead,
 } from "./services/supportChatService";
 
-// --- Models ---
 export {
   createProductModel,
   PRODUCT_CATEGORIES,
@@ -110,7 +100,7 @@ export {
 
 export {
   createOrderModel,
-  ORDER_STATUS,
+  ORDER_STATUS as ORDER_MODEL_STATUS,
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
   calculateTotal,
@@ -128,7 +118,6 @@ export {
   DEFAULT_CATEGORIES,
 } from "./models/Category.model";
 
-// --- Custom Hooks ---
 export { default as useAuth } from "./hooks/useAuth";
 export { default as useProducts } from "./hooks/useProducts";
 export { default as useOrders } from "./hooks/useOrders";

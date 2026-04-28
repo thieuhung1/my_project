@@ -114,7 +114,7 @@ export const CartProvider = ({ children }) => {
       subtotal,
       paymentMethod: type === 'DINE_IN' ? PAYMENT_METHOD.COD : paymentMethod,
       paymentStatus: PAYMENT_STATUS.UNPAID,
-      paymentProvider: paymentMethod === PAYMENT_METHOD.VNPAY ? PAYMENT_PROVIDER.VNPAY : PAYMENT_PROVIDER.LOCAL,
+      paymentProvider: paymentMethod === PAYMENT_METHOD.VNPAY ? PAYMENT_PROVIDER.VNPAY : paymentMethod === PAYMENT_METHOD.MOMO ? PAYMENT_PROVIDER.LOCAL : PAYMENT_PROVIDER.LOCAL,
       type,
       table_id: tableId,
       note,

@@ -71,12 +71,27 @@ const Orders = () => {
 
     setLoading(true);
     try {
-      await checkout({
+      const orderId = await checkout({
         type: orderType,
         tableId: orderType === 'DINE_IN' ? tableId : null,
-        phone, address, paymentMethod: orderType === 'DINE_IN' ? 'CASH' : paymentMethod,
-        note, coupon: appliedCoupon || null
+        phone,
+        address,
+        paymentMethod: orderType === 'DINE_IN' ? 'CASH' : paymentMethod,
+        note,
+        coupon: appliedCoupon || null,
+        requirePaymentPage: orderType !== 'DINE_IN' && paymentMethod !== 'COD',
       });
+
+      if (orderType !== 'DINE_IN' && paymentMethod === 'MOMO') {
+        navigate(`/checkout/${orderId}?method=momo`, { replace: true });
+        return;
+      }
+
+      if (orderType !== 'DINE_IN' && paymentMethod === 'VNPAY') {
+        navigate(`/checkout/${orderId}?method=vnpay`, { replace: true });
+        return;
+      }
+
       navigate('/my-orders', { state: { success: true } });
     } catch (err) {
       setError(err.message || 'Đặt hàng thất bại');
@@ -124,6 +139,7 @@ const Orders = () => {
                       <label className="form-label fw-semibold">Thanh toán</label>
                       <select className="form-select" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
                         <option value="COD">Tiền mặt khi nhận</option>
+                        <option value="MOMO">Ví MoMo</option>
                       </select>
                     </div>
                     <div className="col-12">

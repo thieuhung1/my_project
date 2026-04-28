@@ -34,6 +34,20 @@ const ORDER_STATUS_ICON = {
   CANCELLED: 'bi-slash-circle'
 };
 
+const PAYMENT_STATUS_LABEL = {
+  UNPAID: 'Chưa thanh toán',
+  PENDING: 'Đang xử lý',
+  PAID: 'Đã thanh toán',
+  FAILED: 'Thanh toán thất bại'
+};
+
+const PAYMENT_STATUS_COLOR = {
+  UNPAID: 'secondary',
+  PENDING: 'warning',
+  PAID: 'success',
+  FAILED: 'danger'
+};
+
 const fmt = n => (typeof n === 'number' ? n.toLocaleString('vi-VN') + ' VNĐ' : n);
 
 const MyOrders = () => {
@@ -217,6 +231,10 @@ const MyOrders = () => {
                         <i className="bi bi-wallet2 me-1" />
                         {order.paymentMethod === 'COD' ? 'COD' : order.paymentMethod || 'Tiền mặt'}
                       </span>
+                      <span className={`badge bg-${PAYMENT_STATUS_COLOR[(order.paymentStatus || '').toUpperCase()] || 'secondary'} text-${PAYMENT_STATUS_COLOR[(order.paymentStatus || '').toUpperCase()] || 'secondary'} bg-opacity-10 border ms-1`}>
+                        <i className="bi bi-shield-check me-1" />
+                        {PAYMENT_STATUS_LABEL[(order.paymentStatus || '').toUpperCase()] || order.paymentStatus || 'Chưa thanh toán'}
+                      </span>
                     </div>
 
                     {/* Mã giảm giá */}
@@ -322,6 +340,32 @@ const MyOrders = () => {
                             <i className="bi bi-chat-left-text me-1" />Ghi chú:
                           </small>
                           <div className="small">{order.note}</div>
+                        </div>
+                      )}
+
+                      {/* Thanh toán */}
+                      {order.paymentStatus !== 'PAID' && (
+                        <div className="mt-2 p-3 bg-white rounded border">
+                          <div className="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                            <div>
+                              <small className="text-muted d-block mb-1">
+                                <i className="bi bi-credit-card me-1" />Thanh toán:
+                              </small>
+                              <div className="small fw-semibold">
+                                {order.paymentMethod === 'COD' ? 'Tiền mặt khi nhận' : order.paymentMethod || 'Tiền mặt khi nhận'}
+                              </div>
+                            </div>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-warning"
+                              onClick={() => window.location.assign(`/checkout/${order.id}`)}
+                            >
+                              Thanh toán ngay
+                            </button>
+                          </div>
+                          <div className="small text-muted mt-2">
+                            Đơn hàng này đang ở trạng thái thanh toán {PAYMENT_STATUS_LABEL[(order.paymentStatus || '').toUpperCase()] || 'Chưa thanh toán'}.
+                          </div>
                         </div>
                       )}
 
