@@ -7,6 +7,7 @@ Tài liệu này mô tả cấu trúc backend hiện tại của dự án FoodHu
 - Tách rõ service, model, hook và helper.
 - Giảm logic trùng lặp.
 - Chuẩn hóa luồng dữ liệu cho auth, product, order, coupon, review, storage và support chat.
+- Loại bỏ sạch mọi dấu vết payment online không còn dùng.
 
 ## Cấu trúc thư mục
 - `src/backend/firebase` - khởi tạo Firebase.
@@ -17,10 +18,16 @@ Tài liệu này mô tả cấu trúc backend hiện tại của dự án FoodHu
 - `src/backend/index.js` - export tập trung.
 
 ## Quy ước hiện tại
-- `services`: chỉ xử lý nghiệp vụ.
-- `models`: chỉ mô tả dữ liệu và hằng số liên quan.
-- `hooks`: chỉ bọc logic truy xuất dữ liệu cho UI.
+- `services`: xử lý nghiệp vụ, cập nhật dữ liệu và kiểm tra dữ liệu vào/ra.
+- `models`: mô tả dữ liệu mặc định, hằng số trạng thái và helper tính toán.
+- `hooks`: bọc logic truy xuất dữ liệu cho UI.
 - `firestoreHelpers`: gom helper dùng chung cho Firestore.
+
+## Chuẩn hóa order flow
+- Chỉ giữ `COD` là phương thức thanh toán backend mặc định.
+- Chỉ giữ `LOCAL` là payment provider nội bộ.
+- Order creation chạy trong transaction và kiểm tra tồn kho trước khi trừ stock.
+- Các trạng thái order và payment status được đặt ở model dùng chung.
 
 ## Collections chính
 - `users`

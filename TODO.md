@@ -1,183 +1,226 @@
-# BACKEND CLEAN CODE & OPTIMIZATION TODO - FOODHUB
+# KẾ HOẠCH CLEAN CODE & TỐI ƯU TOÀN BỘ BACKEND - FOODHUB
 
 ## Mục tiêu chính
-- Làm backend sạch hơn, rõ ràng hơn và dễ sửa hơn về lâu dài.
-- Tách đúng trách nhiệm giữa route, service, model, helper và seed data.
-- Giảm code lặp, giảm file rác, giảm logic chồng chéo.
-- Chuẩn hóa luồng dữ liệu, error handling và naming convention.
-- Loại bỏ hoàn toàn logic thanh toán online không còn dùng.
+- Làm backend rõ ràng, dễ đọc, dễ sửa và dễ mở rộng.
+- Chuẩn hóa route, service, model, helper và hook.
+- Giảm code thừa, code trùng và file rác.
+- Tối ưu luồng order, inventory, status và data flow.
+- Loại bỏ hoàn toàn payment online còn sót trong backend.
+
+---
 
 ## PHASE 1: KHẢO SÁT & LẬP BẢN ĐỒ BACKEND
 ### Mục tiêu
-Hiểu rõ cấu trúc backend hiện tại trước khi refactor để tránh phá vỡ luồng đang chạy.
+Hiểu rõ cấu trúc backend hiện tại trước khi chỉnh sửa để tránh làm hỏng luồng chính.
 
-### Việc cần làm
-- [ ] Rà soát toàn bộ thư mục `src/backend`.
-- [ ] Liệt kê tất cả file đang được import và file không còn dùng.
-- [ ] Phân loại rõ:
-  - [ ] `services`
-  - [ ] `models`
-  - [ ] `hooks`
-  - [ ] `seeds`
-  - [ ] `firebase`
-  - [ ] `server`
-- [ ] Kiểm tra toàn bộ endpoint hiện có.
-- [ ] Xác định file nào đang ôm quá nhiều trách nhiệm.
-- [ ] Tìm mọi dấu vết còn sót của MoMo / VNPay / PayOS / thanh toán online.
-- [ ] Tìm các đoạn logic trùng nhau giữa service và helper.
+### Checklist
+- [x] Rà soát toàn bộ thư mục `src/backend`.
+- [x] Phân loại rõ các nhóm file: `firebase`, `services`, `models`, `hooks`, `seeds`.
+- [x] Liệt kê toàn bộ endpoint / service / hook / model đang có.
+- [x] Xác định phần nào đang được dùng thật sự, phần nào đã lỗi thời.
+- [x] Tìm tất cả dấu vết payment online còn sót.
+- [x] Ghi lại các file có nguy cơ trùng logic hoặc khó bảo trì.
 
 ### Kết quả mong muốn
-- [ ] Danh sách file cần giữ.
-- [ ] Danh sách file cần sửa.
-- [ ] Danh sách file cần gộp.
-- [ ] Danh sách file cần xóa.
-- [ ] Danh sách phần thanh toán online cần loại bỏ.
+- [x] Danh sách file backend cần giữ.
+- [x] Danh sách file backend cần sửa.
+- [x] Danh sách file backend cần xóa hoặc gộp.
+- [x] Danh sách endpoint/service/model cần chuẩn hóa.
+
+---
 
 ## PHASE 2: CHUẨN HÓA KIẾN TRÚC BACKEND
 ### Mục tiêu
-Làm backend có cấu trúc rõ ràng, mỗi lớp chỉ làm đúng việc của nó.
+Làm kiến trúc backend rõ trách nhiệm, dễ đọc và dễ sửa.
 
-### Việc cần làm
-- [ ] Route chỉ nhận request và trả response.
-- [ ] Service xử lý nghiệp vụ.
-- [ ] Model chỉ mô tả schema/structure dữ liệu.
-- [ ] Helper chỉ chứa hàm dùng chung.
+### Checklist
 - [ ] Chuẩn hóa cách đặt tên file, hàm và hằng số.
-- [ ] Chuẩn hóa export/import để tránh vòng phụ thuộc.
+- [ ] Tách rõ trách nhiệm giữa route, service, model và helper.
 - [ ] Chuẩn hóa error handling và message trả về.
-- [ ] Tách logic chung ra khỏi route hoặc component lớn.
-
-## PHASE 3: CHUẨN HÓA SERVICE & HELPER
-### Mục tiêu
-Giảm code lặp và gom các phần dùng chung về đúng chỗ.
-
-### Việc cần làm
-- [ ] Rà soát `firestoreHelpers.js`.
-- [ ] Gom các hàm map/format/timestamp dùng chung.
-- [ ] Rà soát `authService.js`.
-- [ ] Rà soát `productService.js`.
-- [ ] Rà soát `orderService.js`.
-- [ ] Rà soát `userService.js`.
-- [ ] Rà soát `couponService.js`.
-- [ ] Rà soát `reviewService.js`.
-- [ ] Rà soát `storageService.js`.
-- [ ] Xóa các helper trùng logic hoặc khó hiểu.
-
-## PHASE 4: TỐI ƯU LUỒNG ORDER / INVENTORY
-### Mục tiêu
-Làm luồng đơn hàng ổn định, dễ đọc và ít lỗi cạnh tranh dữ liệu.
-
-### Việc cần làm
-- [ ] Rà soát `orderService.js`.
-- [ ] Chuẩn hóa trạng thái đơn hàng.
-- [ ] Chuẩn hóa trạng thái thanh toán.
-- [ ] Kiểm tra transaction trừ tồn kho.
-- [ ] Xác định rõ logic tạo đơn mới.
-- [ ] Kiểm tra các hàm lấy đơn theo user, shipper, admin.
-- [ ] Chuẩn hóa logic assign shipper.
-- [ ] Giảm truy vấn dư thừa.
-
-## PHASE 5: XÓA TOÀN BỘ PAYMENT ONLINE
-### Mục tiêu
-Loại bỏ sạch mọi logic backend không còn dùng đến liên quan MoMo / VNPay / PayOS.
-
-### Việc cần làm
-- [ ] Xóa service thanh toán online nếu còn.
-- [ ] Xóa route payment create / webhook / callback / confirm.
-- [ ] Xóa helper tạo chữ ký thanh toán.
-- [ ] Xóa biến môi trường payment gateway.
-- [ ] Xóa import và dependency thừa liên quan payment.
-- [ ] Chuyển checkout sang luồng còn lại hợp lệ.
-- [ ] Kiểm tra backend vẫn tạo đơn bình thường.
+- [ ] Gom logic dùng chung vào helper thay vì copy-paste.
+- [ ] Chuẩn hóa `index.js` export tập trung.
+- [ ] Cập nhật `README.md` backend theo kiến trúc mới.
 
 ### Kết quả mong muốn
-- [ ] Không còn endpoint payment online.
-- [ ] Không còn service payment gateway.
+- [ ] Service gọn hơn, ít trách nhiệm chồng chéo hơn.
+- [ ] Helper dùng chung được gom lại rõ ràng.
+- [ ] Export/import backend đồng bộ hơn.
+
+---
+
+## PHASE 3: TỐI ƯU LUỒNG ORDER / INVENTORY / STATUS
+### Mục tiêu
+Làm luồng đặt hàng an toàn hơn, ít lỗi hơn và dễ bảo trì hơn.
+
+### Checklist
+- [ ] Rà soát `orderService.js`.
+- [ ] Chuẩn hóa các trạng thái đơn hàng.
+- [ ] Chuẩn hóa `paymentStatus`, `paymentMethod`, `paymentProvider`.
+- [ ] Tách helper kiểm tra tồn kho, trừ tồn kho và cập nhật đơn.
+- [ ] Kiểm tra luồng tạo đơn bằng transaction.
+- [ ] Rà lại luồng lấy đơn theo user, admin và shipper.
+- [ ] Xóa mọi logic payment online còn sót khỏi luồng order.
+
+### Kết quả mong muốn
+- [ ] Tạo đơn ổn định hơn.
+- [ ] Inventory được trừ đúng.
+- [ ] Status đơn và payment status nhất quán.
+- [ ] Không còn dependency vào payment gateway.
+
+---
+
+## PHASE 4: SỬA LỖI HIỆN CÓ
+### Mục tiêu
+Ổn định backend trước khi dọn sâu hơn.
+
+### Checklist
+- [ ] Rà soát lỗi query Firestore.
+- [ ] Rà soát lỗi transaction khi tạo đơn.
+- [ ] Rà soát lỗi cập nhật trạng thái đơn.
+- [ ] Rà soát lỗi import/export module.
+- [ ] Rà soát lỗi seed data không khớp schema.
+- [ ] Rà soát lỗi console / exception chưa bắt đúng.
+- [ ] Sửa lỗi phát sinh sau refactor.
+
+### Kết quả mong muốn
+- [ ] Backend chạy ổn hơn.
+- [ ] Lỗi logic và lỗi cấu trúc giảm rõ rệt.
+- [ ] Không còn lỗi import / export gây đứt luồng.
+
+---
+
+## PHASE 5: XÓA HOÀN TOÀN THANH TOÁN ONLINE
+### Mục tiêu
+Loại bỏ sạch mọi logic payment online không còn dùng.
+
+### Checklist
+- [ ] Xóa service payment online không còn dùng.
+- [ ] Xóa route payment create / webhook / notify / confirm.
+- [ ] Xóa helper tạo chữ ký hoặc URL thanh toán.
+- [ ] Xóa biến môi trường payment online trong `.env.example`.
+- [ ] Xóa file / import / dependency payment online thừa.
+- [ ] Kiểm tra backend vẫn tạo đơn bình thường bằng phương thức còn lại.
+
+### Kết quả mong muốn
+- [ ] Không còn MoMo / VNPay / PayOS trong backend.
+- [ ] Không còn route payment gateway.
 - [ ] Không còn env payment gateway.
-- [ ] Không còn logic payment online rơi rớt trong code.
+- [ ] Không còn lỗi build sau khi xóa.
 
-## PHASE 6: CHUẨN HÓA MODEL & SEED DATA
+---
+
+## PHASE 6: CHUẨN HÓA MODEL / SCHEMA / SEED DATA
 ### Mục tiêu
-Làm dữ liệu backend đồng nhất, dễ seed và dễ bảo trì.
+Làm dữ liệu backend đồng nhất và dễ seed lại.
 
-### Việc cần làm
-- [ ] Rà soát toàn bộ model:
-  - [ ] `User.model.js`
-  - [ ] `Product.model.js`
-  - [ ] `Order.model.js`
-  - [ ] `Coupon.model.js`
-  - [ ] `Category.model.js`
-- [ ] Chuẩn hóa field giữa model và dữ liệu thực tế.
-- [ ] Rà soát seed data.
-- [ ] Chuẩn hóa trạng thái order / payment / role.
-- [ ] Xóa seed data không còn dùng.
-- [ ] Đảm bảo dữ liệu mẫu không chứa logic payment online cũ.
+### Checklist
+- [ ] Rà soát `User.model.js`.
+- [ ] Rà soát `Product.model.js`.
+- [ ] Rà soát `Order.model.js`.
+- [ ] Rà soát `Coupon.model.js`.
+- [ ] Rà soát `Category.model.js`.
+- [ ] Đồng bộ field giữa model và dữ liệu thực tế.
+- [ ] Dọn seed data không dùng hoặc sai schema.
+- [ ] Chuẩn hóa trạng thái order / payment trong model.
 
-## PHASE 7: TỐI ƯU FIRESTORE / AUTH / STORAGE
+### Kết quả mong muốn
+- [ ] Model rõ ràng hơn.
+- [ ] Seed data khớp schema hơn.
+- [ ] Dễ khởi tạo lại dữ liệu sau này.
+
+---
+
+## PHASE 7: TỐI ƯU FIRESTORE / STORAGE / AUTH
 ### Mục tiêu
-Giảm lỗi query, giảm code phức tạp và tăng tính ổn định.
+Giảm truy vấn thừa và làm backend ổn định hơn.
 
-### Việc cần làm
-- [ ] Tối ưu query Firestore.
-- [ ] Kiểm tra index và sort/query logic.
-- [ ] Rà soát `firebaseConfig`.
-- [ ] Rà soát `useAuth`, `useProducts`, `useOrders`, `useStorage`.
-- [ ] Chuẩn hóa upload file và lấy URL.
-- [ ] Tối ưu xử lý lỗi network và quyền truy cập.
+### Checklist
+- [ ] Rà soát `firestoreHelpers.js`.
+- [ ] Kiểm tra các query Firestore trùng lặp.
+- [ ] Rà lại `useAuth`, `useProducts`, `useOrders`, `useStorage`.
+- [ ] Tối ưu upload và lấy file từ Storage.
+- [ ] Chuẩn hóa xử lý lỗi network và permission.
+- [ ] Tối ưu các luồng auth cơ bản.
 
-## PHASE 8: DỌN CODE & CHUẨN HÓA IMPORT / EXPORT
+### Kết quả mong muốn
+- [ ] Query gọn hơn.
+- [ ] Tải dữ liệu ổn hơn.
+- [ ] Xử lý lỗi rõ hơn.
+
+---
+
+## PHASE 8: DỌN CODE & CHUẨN HÓA EXPORT / IMPORT
 ### Mục tiêu
-Làm codebase gọn, sạch và dễ đọc hơn.
+Làm backend gọn, sạch và dễ bảo trì hơn.
 
-### Việc cần làm
-- [ ] Xóa file không còn dùng.
-- [ ] Xóa function không còn dùng.
-- [ ] Xóa comment cũ, TODO cũ, code thử nghiệm.
-- [ ] Chuẩn hóa `default export` và `named export`.
-- [ ] Rà lại toàn bộ import thừa.
-- [ ] Dọn file README backend nếu cần cập nhật lại.
-- [ ] Kiểm tra lại cấu trúc folder backend.
+### Checklist
+- [ ] Xóa file thừa, file backup hoặc file trùng chức năng.
+- [ ] Rà lại toàn bộ import không cần thiết.
+- [ ] Chuẩn hóa default export / named export.
+- [ ] Dọn TODO cũ, comment lỗi thời và code chết.
+- [ ] Cập nhật `README.md` backend sau khi refactor.
 
-## PHASE 9: KIỂM THỬ CUỐI CÙNG
+### Kết quả mong muốn
+- [ ] Backend gọn hơn.
+- [ ] Ít file rác hơn.
+- [ ] Dễ tìm logic hơn.
+
+---
+
+## PHASE 9: TEST CUỐI CÙNG & CHỐT CHECKLIST
 ### Mục tiêu
-Đảm bảo backend ổn định trước khi chốt.
+Đảm bảo backend hoạt động ổn định trước khi chốt.
 
 ### Checklist test
 - [ ] Auth hoạt động bình thường.
-- [ ] Product CRUD hoạt động đúng.
+- [ ] Product CRUD / đọc dữ liệu ổn.
 - [ ] Order create/update/query ổn.
 - [ ] Inventory trừ đúng khi tạo đơn.
 - [ ] Coupon hoạt động đúng.
-- [ ] Review hoạt động đúng.
-- [ ] Storage upload/download hoạt động đúng.
-- [ ] Không còn MoMo / VNPay / PayOS.
-- [ ] Không còn route chết, file chết, import chết.
-- [ ] Không có lỗi console hoặc exception chưa bắt.
-- [ ] Backend chạy ổn định sau refactor.
+- [ ] Support chat hoạt động đúng.
+- [ ] Không còn payment online trong backend.
+- [ ] Không còn route/service chết.
+- [ ] Backend không lỗi khi build/run.
+- [ ] Không còn console error / exception chưa bắt.
+
+### Kết quả mong muốn
+- [ ] Backend ổn định.
+- [ ] Code dễ sửa sau này.
+- [ ] Checklist toàn bộ phase được chốt hoàn thành.
+
+---
 
 ## Thứ tự ưu tiên triển khai
-1. Khảo sát backend và lập bản đồ file / endpoint / logic.
-2. Chuẩn hóa kiến trúc route - service - model - helper.
-3. Tối ưu order / inventory flow.
-4. Xóa payment online còn sót.
-5. Chuẩn hóa model và seed data.
-6. Tối ưu Firestore / auth / storage.
-7. Dọn code, chuẩn hóa export/import.
-8. Test và debug cuối cùng.
+1. Khảo sát backend và lập bản đồ.
+2. Chuẩn hóa kiến trúc.
+3. Tối ưu order / inventory / status.
+4. Sửa lỗi hiện có.
+5. Xóa payment online còn sót.
+6. Chuẩn hóa model / schema / seed data.
+7. Tối ưu Firestore / Storage / Auth.
+8. Dọn code và chuẩn hóa import/export.
+9. Test cuối và chốt checklist.
+
+## Kết quả khảo sát nhanh
+- `src/backend` có 30 file, chia thành `firebase`, `services`, `models`, `hooks`, `seeds` và `index.js`.
+- Không thấy dấu vết `MoMo`, `VNPay`, `PayOS`, webhook, URL thanh toán hay hàm tạo payment gateway trong backend hiện tại.
+- `orderService.js` đã dùng transaction để kiểm tra và trừ tồn kho, nhưng vẫn nên tiếp tục chuẩn hóa thêm model/status nếu refactor sâu hơn.
+- `supportChatService.js` có logic Realtime Database riêng, cần tách helper nếu muốn chuẩn hóa kiến trúc sâu hơn.
+- `authService.js` và một số service khác còn comment/format chưa đồng nhất, phù hợp để dọn ở phase sau.
 
 ## Rủi ro cần chú ý
 - Xóa payment online có thể kéo theo logic order/payment ở nhiều nơi.
-- Refactor service dùng chung có thể làm đứt các luồng admin / shipper / waiter.
-- Sửa transaction tồn kho có thể ảnh hưởng trực tiếp đến checkout.
-- Seed data và dữ liệu thật lệch schema có thể gây lỗi khó phát hiện.
+- Refactor service dùng chung có thể ảnh hưởng luồng admin / shipper / waiter.
+- Dữ liệu seed và dữ liệu thật lệch schema có thể gây lỗi khó phát hiện.
+- Tối ưu transaction nếu làm sai có thể ảnh hưởng trực tiếp đến checkout.
 
 ## Kết quả mong muốn cuối cùng
-- Backend gọn hơn, rõ hơn và dễ sửa hơn.
-- Logic được chia đúng lớp.
-- Ít bug hơn, ít code lặp hơn.
+- Backend gọn, sạch, rõ và dễ bảo trì hơn.
+- Luồng đơn hàng ổn định hơn.
 - Không còn payment online không dùng.
-- Dễ mở rộng và bảo trì về lâu dài.
+- Dữ liệu, service và model đồng nhất hơn.
+- Sẵn sàng cho mở rộng tính năng sau này.
 
 **Ngày bắt đầu:** Hôm nay
 **Mục tiêu hoàn thành:** Trong 2 tuần
-**Ưu tiên cao nhất:** Clean code backend + chuẩn hóa order flow + xóa payment online
+**Ưu tiên cao nhất:** Xóa payment online backend + chuẩn hóa order flow + dọn kiến trúc

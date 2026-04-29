@@ -1,10 +1,8 @@
 import { serverTimestamp } from "firebase/firestore";
 
-// Chuyển Firestore snapshot thành mảng object có kèm id.
 export const mapDocs = (snapshot) =>
   snapshot.docs.map((document) => ({ id: document.id, ...document.data() }));
 
-// Trả về document data kèm id và báo lỗi nếu document không tồn tại.
 export const getDocDataOrThrow = (snapshot, errorMessage) => {
   if (!snapshot.exists()) {
     throw new Error(errorMessage);
@@ -13,10 +11,17 @@ export const getDocDataOrThrow = (snapshot, errorMessage) => {
   return { id: snapshot.id, ...snapshot.data() };
 };
 
-// Tạo field thời gian dùng chung cho cả create/update.
 export const buildTimestamps = (data, isCreate = false) => ({
   ...data,
   ...(isCreate ? { createdAt: serverTimestamp() } : {}),
   updatedAt: serverTimestamp(),
 });
+
+export const createFirestoreError = (message, cause) => {
+  const error = new Error(message);
+  if (cause) error.cause = cause;
+  return error;
+};
+
+export const normalizeCollectionOrderQuery = (field = "createdAt") => field;
 

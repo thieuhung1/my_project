@@ -13,34 +13,18 @@ import {
 } from "firebase/firestore";
 import { db } from "../firebase/firebaseConfig";
 import { getDocDataOrThrow, mapDocs } from "./firestoreHelpers";
-
-export const ORDER_STATUS = {
-  PENDING: "PENDING",
-  WAITING_FOR_SHIPPER: "WAITING_FOR_SHIPPER",
-  CONFIRMED: "CONFIRMED",
-  DELIVERING: "DELIVERING",
-  COMPLETED: "COMPLETED",
-  FAILED: "FAILED",
-  CANCELLED: "CANCELLED",
-};
-
-export const PAYMENT_STATUS = {
-  UNPAID: "UNPAID",
-  PENDING: "PENDING",
-  PAID: "PAID",
-  FAILED: "FAILED",
-};
-
-export const PAYMENT_METHOD = {
-  COD: "COD",
-};
-
-export const PAYMENT_PROVIDER = {
-  LOCAL: "LOCAL",
-};
+import {
+  ORDER_STATUS,
+  PAYMENT_METHOD,
+  PAYMENT_PROVIDER,
+  PAYMENT_STATUS,
+} from "../models/Order.model";
 
 export const COLLECTION_NAME = "orders";
 export const PRODUCTS_COLLECTION = "products";
+
+const ORDER_STATUS_SET = new Set(Object.values(ORDER_STATUS));
+const PAYMENT_STATUS_SET = new Set(Object.values(PAYMENT_STATUS));
 
 const ensureProductStock = async (transaction, item) => {
   const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
@@ -72,13 +56,18 @@ const updateOrderDoc = async (orderId, data) => {
   });
 };
 
+const normalizeOrderStatus = (status) => (ORDER_STATUS_SET.has(status) ? status : ORDER_STATUS.PENDING);
+const normalizePaymentStatus = (status) => (PAYMENT_STATUS_SET.has(status) ? status : PAYMENT_STATUS.UNPAID);
+
 export const createOrder = async (orderData) => {
   return await runTransaction(db, async (transaction) => {
-    for (const item of orderData.items) {
+    const items = Array.isArray(orderData.items) ? orderData.items : [];
+
+    for (const item of items) {
       await ensureProductStock(transaction, item);
     }
 
-    for (const item of orderData.items) {
+    for (const item of items) {
       decrementProductStock(transaction, item);
     }
 
@@ -87,8 +76,11 @@ export const createOrder = async (orderData) => {
 
     transaction.set(orderRef, {
       ...orderData,
-      status: initialStatus,
-      paymentStatus: orderData.paymentStatus || PAYMENT_STATUS.UNPAID,
+      items,
+      status: normalizeOrderStatus(initialStatus),
+      paymentMethod: orderData.paymentMethod || PAYMENT_METHOD.COD,
+      paymentStatus: normalizePaymentStatus(orderData.paymentStatus),
+      paymentProvider: orderData.paymentProvider || PAYMENT_PROVIDER.LOCAL,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
@@ -98,7 +90,7 @@ export const createOrder = async (orderData) => {
 };
 
 export const updatePaymentStatus = async (orderId, paymentStatus) => {
-  await updateOrderDoc(orderId, { paymentStatus });
+  await updateOrderDoc(orderId, { paymentStatus: normalizePaymentStatus(paymentStatus) });
 };
 
 export const getOrderById = async (orderId) => {
@@ -120,7 +112,7 @@ export const getAllOrders = async () => {
 };
 
 export const updateOrderStatus = async (orderId, status) => {
-  await updateOrderDoc(orderId, { status });
+  await updateOrderDoc(orderId, { status: normalizeOrderStatus(status) });
 };
 
 export const getOrdersByShipper = async (shipperId) => {

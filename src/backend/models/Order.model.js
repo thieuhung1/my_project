@@ -13,38 +13,31 @@
 
 /**
  * @typedef {Object} Order
- * @property {string}      id            - ID đơn hàng
- * @property {string}      userId        - ID người dùng đặt hàng
- * @property {string}      userName      - Tên người đặt hàng
- * @property {string}      phone         - Số điện thoại
- * @property {string}      address       - Địa chỉ giao hàng
- * @property {OrderItem[]} items         - Danh sách sản phẩm đặt
- * @property {number}      subtotal      - Tạm tính trước giảm giá
- * @property {number}      totalAmount   - Tổng tiền đơn hàng (sau giảm giá)
+ * @property {string}      id             - ID đơn hàng
+ * @property {string}      userId         - ID người dùng đặt hàng
+ * @property {string}      userName       - Tên người đặt hàng
+ * @property {string}      phone          - Số điện thoại
+ * @property {string}      address        - Địa chỉ giao hàng
+ * @property {OrderItem[]} items          - Danh sách sản phẩm đặt
+ * @property {number}      subtotal       - Tạm tính trước giảm giá
+ * @property {number}      totalAmount    - Tổng tiền đơn hàng (sau giảm giá)
  * @property {number}      discountAmount - Số tiền giảm giá
- * @property {string}      couponId      - ID mã giảm giá (nếu có)
- * @property {string}      couponCode    - Mã giảm giá (nếu có)
- * @property {string}      paymentMethod - Phương thức thanh toán (COD/CASH/VNPAY/BANK_QR)
- * @property {string}      paymentStatus - Trạng thái thanh toán (UNPAID/PENDING/PAID/FAILED)
- * @property {string}      paymentProvider - Nhà cung cấp thanh toán (VNPAY/PAYOS/LOCAL)
- * @property {string}      paymentRef     - Mã tham chiếu thanh toán
- * @property {string}      paymentUrl     - Link thanh toán ngoài
+ * @property {string}      couponId       - ID mã giảm giá (nếu có)
+ * @property {string}      couponCode     - Mã giảm giá (nếu có)
+ * @property {string}      paymentMethod  - Phương thức thanh toán (COD)
+ * @property {string}      paymentStatus  - Trạng thái thanh toán (UNPAID/PENDING/PAID/FAILED)
+ * @property {string}      paymentProvider - Nhà cung cấp thanh toán (LOCAL)
  * @property {string}      paidAt         - Thời điểm thanh toán thành công
- * @property {string}      status        - Trạng thái đơn hàng (UPPERCASE)
- * @property {string}      type          - Loại đơn (DELIVERY/DINE_IN)
- * @property {string}      table_id      - Mã bàn (nếu DINE_IN)
- * @property {string}      note          - Ghi chú của khách hàng
- * @property {string}      shipperId     - ID shipper (nếu có)
- * @property {string}      shipperName   - Tên shipper (nếu có)
- * @property {Date}        createdAt     - Thời gian đặt hàng
- * @property {Date}        updatedAt     - Thời gian cập nhật
+ * @property {string}      status         - Trạng thái đơn hàng (UPPERCASE)
+ * @property {string}      type           - Loại đơn (DELIVERY/DINE_IN)
+ * @property {string}      table_id       - Mã bàn (nếu DINE_IN)
+ * @property {string}      note           - Ghi chú của khách hàng
+ * @property {string}      shipperId      - ID shipper (nếu có)
+ * @property {string}      shipperName    - Tên shipper (nếu có)
+ * @property {Date}        createdAt      - Thời gian đặt hàng
+ * @property {Date}        updatedAt      - Thời gian cập nhật
  */
 
-/**
- * Tạo một object đơn hàng mặc định
- * @param {Partial<Order>} overrides
- * @returns {Order}
- */
 export const PAYMENT_METHOD = {
   COD: "COD",
 };
@@ -60,39 +53,16 @@ export const PAYMENT_PROVIDER = {
   LOCAL: "LOCAL",
 };
 
-export const createOrderModel = (overrides = {}) => ({
-  userId: "",
-  userName: "",
-  phone: "",
-  address: "",
-  items: [],
-  subtotal: 0,
-  totalAmount: 0,
-  discountAmount: 0,
-  paymentMethod: PAYMENT_METHOD.COD,
-  paymentStatus: PAYMENT_STATUS.UNPAID,
-  paymentProvider: PAYMENT_PROVIDER.LOCAL,
-  paymentRef: "",
-  paymentUrl: "",
-  paidAt: null,
-  status: "PENDING",
-  type: "DELIVERY",
-  note: "",
-  ...overrides,
-});
-
-// ── Các trạng thái đơn hàng hợp lệ (UPPERCASE - khớp với orderService.js) ──
 export const ORDER_STATUS = {
-  PENDING: "PENDING",                       // Chờ xử lý
-  WAITING_FOR_SHIPPER: "WAITING_FOR_SHIPPER", // Chờ shipper nhận
-  CONFIRMED: "CONFIRMED",                   // Đã xác nhận
-  DELIVERING: "DELIVERING",                 // Đang giao hàng
-  COMPLETED: "COMPLETED",                   // Hoàn thành
-  FAILED: "FAILED",                         // Giao hàng thất bại
-  CANCELLED: "CANCELLED",                   // Đã hủy
+  PENDING: "PENDING",
+  WAITING_FOR_SHIPPER: "WAITING_FOR_SHIPPER",
+  CONFIRMED: "CONFIRMED",
+  DELIVERING: "DELIVERING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+  CANCELLED: "CANCELLED",
 };
 
-// Label tiếng Việt cho từng trạng thái
 export const ORDER_STATUS_LABEL = {
   PENDING: "Chờ xử lý",
   WAITING_FOR_SHIPPER: "Chờ shipper",
@@ -103,7 +73,6 @@ export const ORDER_STATUS_LABEL = {
   CANCELLED: "Đã hủy",
 };
 
-// Màu badge cho từng trạng thái
 export const ORDER_STATUS_COLOR = {
   PENDING: "warning",
   WAITING_FOR_SHIPPER: "secondary",
@@ -114,11 +83,34 @@ export const ORDER_STATUS_COLOR = {
   CANCELLED: "dark",
 };
 
+export const createOrderModel = (overrides = {}) => ({
+  userId: "",
+  userName: "",
+  phone: "",
+  address: "",
+  items: [],
+  subtotal: 0,
+  totalAmount: 0,
+  discountAmount: 0,
+  couponId: "",
+  couponCode: "",
+  paymentMethod: PAYMENT_METHOD.COD,
+  paymentStatus: PAYMENT_STATUS.UNPAID,
+  paymentProvider: PAYMENT_PROVIDER.LOCAL,
+  paidAt: null,
+  status: ORDER_STATUS.PENDING,
+  type: "DELIVERY",
+  table_id: "",
+  note: "",
+  shipperId: "",
+  shipperName: "",
+  ...overrides,
+});
+
 /**
  * Tính tổng tiền từ danh sách sản phẩm
  * @param {OrderItem[]} items
  * @returns {number}
  */
-export const calculateTotal = (items) => {
-  return items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-};
+export const calculateTotal = (items) =>
+  items.reduce((sum, item) => sum + item.price * item.quantity, 0);

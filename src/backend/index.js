@@ -31,11 +31,20 @@ export {
   getOrdersByShipper,
   assignOrderToShipper,
   updatePaymentStatus,
+  COLLECTION_NAME as ORDER_COLLECTION_NAME,
+  PRODUCTS_COLLECTION,
+} from "./services/orderService";
+
+export {
   ORDER_STATUS,
   PAYMENT_STATUS,
   PAYMENT_METHOD,
   PAYMENT_PROVIDER,
-} from "./services/orderService";
+  ORDER_STATUS_LABEL,
+  ORDER_STATUS_COLOR,
+  createOrderModel,
+  calculateTotal,
+} from "./models/Order.model";
 
 export {
   createUserProfile,
