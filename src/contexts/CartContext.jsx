@@ -3,7 +3,8 @@
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useState } from 'react';
-import { createOrder, PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_PROVIDER } from '../backend/services/orderService';
+import { createOrder } from '../backend/services/orderService';
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_PROVIDER } from '../backend/models/Order.model';
 import { getCouponByCode } from '../backend/services/couponService';
 import { useAuth } from './AuthContext';
 

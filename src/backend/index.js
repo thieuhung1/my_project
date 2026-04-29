@@ -42,7 +42,6 @@ export {
   PAYMENT_PROVIDER,
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
-  createOrderModel,
   calculateTotal,
 } from "./models/Order.model";
 
@@ -110,9 +109,6 @@ export {
 export {
   createOrderModel,
   ORDER_STATUS as ORDER_MODEL_STATUS,
-  ORDER_STATUS_LABEL,
-  ORDER_STATUS_COLOR,
-  calculateTotal,
 } from "./models/Order.model";
 
 export {

@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, onSnapshot, query, updateDoc, where, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../backend/firebase/firebaseConfig';
 import { useAuth } from '../../contexts/AuthContext';
-import { ORDER_STATUS } from '../../backend/services/orderService';
+import { ORDER_STATUS } from '../../backend/models/Order.model';
 import './Shipper.css';
 
 const MAX_ORDERS_PER_SHIPPER = 5;

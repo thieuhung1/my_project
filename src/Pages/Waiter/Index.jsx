@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../backend/firebase/firebaseConfig';
-import { updateOrderStatus, ORDER_STATUS } from '../../backend/services/orderService';
+import { updateOrderStatus } from '../../backend/services/orderService';
+import { ORDER_STATUS } from '../../backend/models/Order.model';
 import 'bootstrap-icons/font/bootstrap-icons.css';
 
 const CARD_BORDER_COLOR = {
