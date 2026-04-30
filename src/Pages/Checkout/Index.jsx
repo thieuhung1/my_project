@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getOrderById } from '../../backend/services/orderService';
-import { PAYMENT_STATUS } from '../../backend/models/Order.model';
-import LoadingSpinner from '../../Conponents/LoadingSpinner';
-import './Checkout.css';
+import { getOrderById } from '../../features/controllers/orderService';
+import { PAYMENT_STATUS } from '../../features/models/Order.model';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
+import '../../styles/Checkout.css';
 
 const STEPS = [
   { label: 'Xác nhận', icon: 'bi-clipboard-check' },

@@ -15,7 +15,7 @@ import {
   getUserProfile,
   updateUserProfile,
   toggleFavorite as toggleFavoriteService,
-} from '../backend';
+} from '../features';
 import { updateProfile } from 'firebase/auth';
 
 const AuthContext = createContext();

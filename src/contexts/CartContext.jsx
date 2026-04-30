@@ -3,9 +3,9 @@
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useState } from 'react';
-import { createOrder } from '../backend/services/orderService';
-import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_PROVIDER } from '../backend/models/Order.model';
-import { getCouponByCode } from '../backend/services/couponService';
+import { createOrder } from '../features/controllers/orderService';
+import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_PROVIDER } from '../features/models/Order.model';
+import { getCouponByCode } from '../features/controllers/couponService';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();

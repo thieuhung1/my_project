@@ -8,7 +8,7 @@ import {
   getAllOrders,
   getAllUsers,
   getAllCategories
-} from '../../backend';
+} from '../../services';
 
 const COLORS = ['#6a5cff', '#22c55e', '#ffb15e', '#ff7a7a', '#4ec9ff', '#9b59b6'];
 

@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, onSnapshot, query, updateDoc, where, serverTimestamp } from 'firebase/firestore';
-import { db } from '../../backend/firebase/firebaseConfig';
+import { db } from '../../firebase/firebase.Config.js';
 import { useAuth } from '../../contexts/AuthContext';
-import { ORDER_STATUS } from '../../backend/models/Order.model';
-import './Shipper.css';
+import { ORDER_STATUS } from '../../features/models/Order.model.js';
+import '../../styles/Shipper.css';
 
 const MAX_ORDERS_PER_SHIPPER = 5;
 

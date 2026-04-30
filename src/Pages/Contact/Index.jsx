@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { sendSupportMessage } from '../../backend/services/supportChatService';
+import { sendSupportMessage } from '../../features/controllers/supportChatService';
 import { useAuth } from '../../contexts/AuthContext';
 import { serverTimestamp } from 'firebase/database';
 

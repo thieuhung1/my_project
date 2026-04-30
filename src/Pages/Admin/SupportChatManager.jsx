@@ -4,7 +4,7 @@ import {
   subscribeToMessages, 
   sendSupportMessage, 
   markChatAsRead 
-} from '../../backend/services/supportChatService';
+} from '../../features/controllers/supportChatService';
 import { serverTimestamp } from 'firebase/database';
 import { useAuth } from '../../contexts/AuthContext';
 

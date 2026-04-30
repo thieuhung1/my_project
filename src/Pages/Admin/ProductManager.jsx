@@ -5,7 +5,7 @@ import {
   updateProduct,
   deleteProduct,
   getAllCategories
-} from '../../backend';
+} from '../../services';
 
 export default function ProductManager() {
   const [products, setProducts] = useState([]);

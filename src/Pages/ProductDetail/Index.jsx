@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../../contexts/CartContext';
 import { useProducts } from '../../contexts/ProductContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { getReviewsByProduct, addReply, addReview, hasUserReviewed } from '../../backend/services/reviewService';
+import { getReviewsByProduct, addReply, addReview, hasUserReviewed } from '../../features/controllers/reviewService';
 
 const fmt = n => n?.toLocaleString('vi-VN') + 'đ';
 

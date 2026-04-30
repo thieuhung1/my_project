@@ -8,7 +8,7 @@ import UserManager from './UserManager';
 import CouponManager from './CouponManager';
 import CategoryManager from './CategoryManager';
 import SupportChatManager from './SupportChatManager';
-import './Admin.css';
+import '../../styles/Admin.css';
 
 export default function Admin() {
   const [menu, setMenu] = useState('Dashboard');

@@ -10,7 +10,7 @@ import {
   getFeaturedProducts,
   getProductById,
   getAllCategories,
-} from '../backend';
+} from '../features';
 
 const ProductContext = createContext();
 
