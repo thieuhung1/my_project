@@ -12,7 +12,6 @@ const SupportChatIcon = () => {
   const messagesEndRef = useRef(null);
   const { user } = useAuth();
 
-  // anon id ổn định
   const anonId = localStorage.getItem('anon_chat_id') || Math.random().toString(36).substring(2, 9);
   if (!localStorage.getItem('anon_chat_id')) localStorage.setItem('anon_chat_id', anonId);
   const chatId = user ? user.uid : `anon-${anonId}`;
@@ -24,9 +23,6 @@ const SupportChatIcon = () => {
     const unsubscribe = subscribeToMessages(chatId, (data) => {
       const sorted = (data || []).slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
       setMessages(sorted);
-      
-      // Kiểm tra trạng thái đang gõ từ phía admin nếu có (logic này có thể mở rộng sau)
-      // Hiện tại chỉ đơn giản là nhận tin nhắn real-time
     });
     return () => unsubscribe();
   }, [chatId]);
@@ -43,7 +39,6 @@ const SupportChatIcon = () => {
         direction: 'user',
         timestamp: serverTimestamp()
       });
-      // Khi gửi tin nhắn trực tiếp cho Admin, không cần xử lý AI bot reply ở đây nữa
     } catch (err) {
       setInput(text);
       alert('Gửi thất bại: ' + err.message);
@@ -59,7 +54,6 @@ const SupportChatIcon = () => {
 
   return (
     <>
-      {/* Floating button */}
       {!chatOpen && (
         <button
           className="chat-fab"
@@ -72,10 +66,8 @@ const SupportChatIcon = () => {
         </button>
       )}
 
-      {/* Chat window */}
       {chatOpen && (
         <div className="chat-window">
-          {/* Header */}
           <div className="chat-header">
             <div className="chat-header-left">
               <div className="avatar-ring">
@@ -93,11 +85,12 @@ const SupportChatIcon = () => {
             </button>
           </div>
 
-          {/* Messages */}
           <div className="chat-body">
             {messages.length === 0 ? (
               <div className="chat-empty">
-                <div className="empty-icon"><i className="bi bi-chat-left-dots" /></div>
+                <div className="empty-icon">
+                  <i className="bi bi-chat-left-dots" />
+                </div>
                 <p>Chào bạn! Mình có thể giúp gì cho bạn hôm nay?</p>
                 <div className="quick-replies">
                   {quickReplies.map((reply, idx) => (
@@ -120,9 +113,12 @@ const SupportChatIcon = () => {
                     </div>
                   </div>
                 ))}
+
                 {isTyping && (
                   <div className="bubble them typing">
-                    <span className="dot" /><span className="dot" /><span className="dot" />
+                    <span className="dot" />
+                    <span className="dot" />
+                    <span className="dot" />
                   </div>
                 )}
               </>
@@ -130,10 +126,9 @@ const SupportChatIcon = () => {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Input */}
           <div className="chat-input">
             <div className="input-wrap">
-              <button className="icon-btn" onClick={() => setInput((v)=> v + ' 😊')} title="Emoji">
+              <button className="icon-btn" onClick={() => setInput((v) => v + ' 😊')} title="Emoji">
                 <i className="bi bi-emoji-smile" />
               </button>
               <input

@@ -5,6 +5,7 @@
 
 import { BrowserRouter, Route, Routes, Link, useLocation } from 'react-router-dom';
 import '../styles/App.css';
+import '../styles/AdminShortcutIcon.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // ── Pages ──────────────────────────────────────────────────
@@ -31,7 +32,7 @@ import Header from '../components/layout/Header/Index';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 import Footer from '../components/layout/Footer/Index';
 import SupportChatIcon from '../components/features/SupportChatIcon/index';
-// import AdminChatIcon from '../components/AdminChatIcon/Index';
+import ChatbotIcon from '../components/features/ChatbotIcon/index';
 
 // ── Context Providers ──────────────────────────────────────
 import { AuthProvider } from '../contexts/AuthContext';
@@ -118,7 +119,7 @@ function App() {
               </main>
               <Footer />
               <SupportChatIcon />
-              {/* <AdminChatIcon /> */}
+              <ChatbotIcon />
               <BottomNav />
             </div>
           </BrowserRouter>

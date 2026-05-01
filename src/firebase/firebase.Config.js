@@ -14,12 +14,12 @@ import { getDatabase } from "firebase/database"; // Realtime Database
 const firebaseConfig = {
   apiKey: "AIzaSyDjHVcEciX8zDQXDUTUwkCs-CSATz0UVJc",
   authDomain: "do-an-food-hub.firebaseapp.com",
+  databaseURL: "https://do-an-food-hub-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "do-an-food-hub",
   storageBucket: "do-an-food-hub.firebasestorage.app",
   messagingSenderId: "158553211792",
   appId: "1:158553211792:web:35746edd053c3c22eca915",
-  measurementId: "G-D0N58NRV0J",
-  databaseURL: "https://do-an-food-hub-default-rtdb.asia-southeast1.firebasedatabase.app",
+  measurementId: "G-D0N58NRV0J"
 };
 
 // Khởi tạo Firebase App
