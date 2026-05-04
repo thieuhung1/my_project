@@ -20,6 +20,7 @@ import Orders from '../Pages/Orders/Index';
 import MyOrders from '../Pages/MyOrders/Index';
 import Search from '../Pages/Search/Index';
 import Checkout from '../Pages/Checkout/Index';
+import VnpayReturn from '../Pages/VnpayReturn/Index';
 import MyAccount from '../Pages/MyAccount/Index';
 import Contact from '../Pages/Contact/Index';
 import About from '../Pages/About/Index';
@@ -102,6 +103,7 @@ function App() {
                   />
                   <Route path="/search" element={<Search />} />
                   <Route path="/checkout/:orderId" element={<Checkout />} />
+                  <Route path="/vnpay-return" element={<VnpayReturn />} />
                   <Route path="/my-account" element={<MyAccount />} />
                   <Route path="/contact" element={<Contact />} />
                   <Route path="/about" element={<About />} />

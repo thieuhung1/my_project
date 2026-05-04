@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   getAllUsers,
   updateUserRole
-} from '../../services';
+} from '../../features/services';
 
 export default function UserManager() {
   const [users, setUsers] = useState([]);

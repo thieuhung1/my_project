@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { getOrderById } from '../../features/controllers/orderService';
-import { PAYMENT_STATUS } from '../../features/models/Order.model';
+import { getOrderById, updatePaymentStatus } from '../../features/controllers/orderService';
+import { PAYMENT_STATUS, PAYMENT_METHOD } from '../../features/models/Order.model';
+import { openVnpayPayment } from '../../features/controllers/paymentService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import '../../styles/Checkout.css';
 
@@ -18,6 +19,7 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [step, setStep] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -39,11 +41,37 @@ const Checkout = () => {
 
   const amount = useMemo(() => order?.totalAmount || order?.subtotal || 0, [order]);
   const discount = useMemo(() => order?.discountAmount || 0, [order]);
+  const paymentMethod = order?.paymentMethod || PAYMENT_METHOD.COD;
 
   const fmt = useCallback((n) => {
     if (typeof n !== 'number') return '0₫';
     return n.toLocaleString('vi-VN') + '₫';
   }, []);
+
+  const handleConfirm = async () => {
+    if (!order) return;
+    setSubmitting(true);
+    try {
+      if (paymentMethod === PAYMENT_METHOD.VNPAY) {
+        await updatePaymentStatus(orderId, PAYMENT_STATUS.PENDING);
+        await openVnpayPayment({
+          orderId,
+          amount,
+          orderInfo: `Thanh toán đơn hàng ${orderId}`,
+        });
+        return;
+      }
+
+      await updatePaymentStatus(orderId, PAYMENT_STATUS.PAID);
+      setPaymentSuccess(true);
+      setStep(2);
+    } catch (error) {
+      console.error('Confirm payment error:', error);
+      alert(error.message || 'Không thể xử lý thanh toán');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -79,12 +107,7 @@ const Checkout = () => {
           transition={{ type: 'spring', duration: 0.6 }}
         >
           <div className="card-body p-5 text-center">
-            <motion.div
-              className="result-icon success mx-auto mb-4"
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: 'spring' }}
-            >
+            <motion.div className="result-icon success mx-auto mb-4" initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }}>
               <i className="bi bi-check-lg" />
             </motion.div>
             <h2 className="fw-bold mb-2">Đặt hàng thành công!</h2>
@@ -97,7 +120,7 @@ const Checkout = () => {
               </div>
               <div className="d-flex justify-content-between">
                 <span className="text-muted">Phương thức</span>
-                <span className="fw-bold text-success">Tiền mặt khi nhận hàng</span>
+                <span className="fw-bold text-success">{paymentMethod === PAYMENT_METHOD.VNPAY ? 'VNPay' : 'Tiền mặt khi nhận hàng'}</span>
               </div>
             </div>
 
@@ -147,23 +170,26 @@ const Checkout = () => {
             <div className="card-body p-4 p-md-5">
               <h5 className="fw-bold mb-4">Phương thức thanh toán</h5>
 
-              <div className="alert alert-info border-0 d-flex align-items-center gap-3" style={{ borderRadius: 12, background: 'linear-gradient(135deg, #e7f3ff, #f0f8ff)' }}>
-                <i className="bi bi-cash-stack text-primary fs-4" />
+              <div className={`alert border-0 d-flex align-items-center gap-3 ${paymentMethod === PAYMENT_METHOD.VNPAY ? 'alert-warning' : 'alert-info'}`} style={{ borderRadius: 12 }}>
+                <i className={`bi ${paymentMethod === PAYMENT_METHOD.VNPAY ? 'bi-credit-card-2-front text-warning' : 'bi-cash-stack text-primary'} fs-4`} />
                 <div>
-                  <strong>Thanh toán khi nhận hàng</strong>
-                  <p className="mb-0 small text-muted">Bạn sẽ thanh toán cho shipper khi nhận được đơn.</p>
+                  <strong>{paymentMethod === PAYMENT_METHOD.VNPAY ? 'Thanh toán qua VNPay' : 'Thanh toán khi nhận hàng'}</strong>
+                  <p className="mb-0 small text-muted">
+                    {paymentMethod === PAYMENT_METHOD.VNPAY
+                      ? 'Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.'
+                      : 'Bạn sẽ thanh toán cho shipper khi nhận được đơn.'}
+                  </p>
                 </div>
               </div>
 
               <div className="mt-4">
                 <button
                   className="btn btn-warning text-white w-100 btn-lg rounded-pill shadow-orange"
-                  onClick={() => {
-                    setPaymentSuccess(true);
-                    setStep(2);
-                  }}
+                  onClick={handleConfirm}
+                  disabled={submitting}
                 >
-                  <i className="bi bi-check-circle me-2" /> Xác nhận đặt hàng
+                  <i className={`bi ${submitting ? 'bi-hourglass-split' : 'bi-check-circle'} me-2`} />
+                  {submitting ? 'Đang xử lý...' : paymentMethod === PAYMENT_METHOD.VNPAY ? 'Thanh toán VNPay' : 'Xác nhận đặt hàng'}
                 </button>
               </div>
             </div>
@@ -185,12 +211,12 @@ const Checkout = () => {
                 <div key={idx} className="d-flex align-items-center gap-3 mb-3">
                   <img
                     src={item.imageUrl || '/ASSETS/Images/placeholder.jpg'}
-                    alt={item.name}
+                    alt={item.name || item.productName}
                     className="rounded-3"
                     style={{ width: 60, height: 60, objectFit: 'cover' }}
                   />
                   <div className="flex-grow-1">
-                    <div className="fw-semibold small">{item.name}</div>
+                    <div className="fw-semibold small">{item.name || item.productName}</div>
                     <div className="text-muted small">x{item.quantity}</div>
                   </div>
                   <div className="fw-semibold" style={{ color: 'var(--primary-orange)' }}>

@@ -1,4 +1,4 @@
-export { app, analytics, auth, db, storage, rtdb } from "../firebase/firebase.Config";
+export { app, analytics, auth, db, storage, rtdb } from "../../firebase/firebase.Config";
 
 export {
   registerWithEmail,
@@ -8,7 +8,7 @@ export {
   resetPassword,
   onAuthStateChange,
   getCurrentUser,
-} from "../features/controllers/authService";
+} from "../controllers/authService";
 
 export {
   getAllProducts,
@@ -18,9 +18,9 @@ export {
   addProduct,
   updateProduct,
   deleteProduct,
-} from "../features/controllers/productService";
+} from "../controllers/productService";
 
-export { mapDocs, getDocDataOrThrow, buildTimestamps } from "../features/controllers/firestoreHelpers";
+export { mapDocs, getDocDataOrThrow, buildTimestamps } from "../controllers/firestoreHelpers";
 
 export {
   createOrder,
@@ -33,7 +33,13 @@ export {
   updatePaymentStatus,
   COLLECTION_NAME as ORDER_COLLECTION_NAME,
   PRODUCTS_COLLECTION,
-} from "../features/controllers/orderService";
+} from "../controllers/orderService";
+
+export {
+  createVnpayPaymentUrl,
+  openVnpayPayment,
+  syncVnpayOrderPayment,
+} from "../controllers/paymentService";
 
 export {
   ORDER_STATUS,
@@ -43,7 +49,7 @@ export {
   ORDER_STATUS_LABEL,
   ORDER_STATUS_COLOR,
   calculateTotal,
-} from "../features/models/Order.model";
+} from "../models/Order.model";
 
 export {
   createUserProfile,
@@ -54,14 +60,14 @@ export {
   getUsersByRole,
   toggleFavorite,
   getFavorites,
-} from "../features/controllers/userService";
+} from "../controllers/userService";
 
 export {
   uploadProductImage,
   uploadUserAvatar,
   deleteFile,
   getFileURL,
-} from "../features/controllers/storageService";
+} from "../controllers/storageService";
 
 export {
   getAllCategories,
@@ -69,7 +75,7 @@ export {
   addCategory,
   updateCategory,
   deleteCategory,
-} from "../features/controllers/categoryService";
+} from "../controllers/categoryService";
 
 export {
   getAllCoupons,
@@ -79,7 +85,7 @@ export {
   deleteCoupon,
   toggleCouponStatus,
   getCouponByCode,
-} from "../features/controllers/couponService";
+} from "../controllers/couponService";
 
 export {
   getReviewsByProduct,
@@ -88,7 +94,7 @@ export {
   hasUserReviewed,
   addReply,
   deleteReply,
-} from "../features/controllers/reviewService";
+} from "../controllers/reviewService";
 
 export {
   getSupportChats,
@@ -98,32 +104,32 @@ export {
   updateChatLastMessage,
   sendSupportMessage,
   markChatAsRead,
-} from "../features/controllers/supportChatService";
+} from "../controllers/supportChatService";
 
 export {
   createProductModel,
   PRODUCT_CATEGORIES,
   calculateDiscountedPrice,
-} from "../features/models/Product.model";
+} from "../models/Product.model";
 
 export {
   createOrderModel,
   ORDER_STATUS as ORDER_MODEL_STATUS,
-} from "../features/models/Order.model";
+} from "../models/Order.model";
 
 export {
   createUserModel,
   USER_ROLES,
   USER_ROLE_LABEL,
   getDefaultAddress,
-} from "../features/models/User.model";
+} from "../models/User.model";
 
 export {
   createCategoryModel,
   DEFAULT_CATEGORIES,
-} from "../features/models/Category.model";
+} from "../models/Category.model";
 
-export { default as useAuth } from "../features/hooks/useAuth";
-export { default as useProducts } from "../features/hooks/useProducts";
-export { default as useOrders } from "../features/hooks/useOrders";
-export { default as useStorage } from "../features/hooks/useStorage";
+export { default as useAuth } from "../hooks/useAuth";
+export { default as useProducts } from "../hooks/useProducts";
+export { default as useOrders } from "../hooks/useOrders";
+export { default as useStorage } from "../hooks/useStorage";

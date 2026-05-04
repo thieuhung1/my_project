@@ -4,7 +4,7 @@ import {
   addCategory,
   updateCategory,
   deleteCategory,
-} from '../../services';
+} from '../../features/services';
 
 export default function CategoryManager() {
   const [categories, setCategories] = useState([]);
