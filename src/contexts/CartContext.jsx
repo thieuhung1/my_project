@@ -7,26 +7,36 @@ import { createOrder } from '../features/controllers/orderService';
 import { PAYMENT_METHOD, PAYMENT_STATUS, PAYMENT_PROVIDER } from '../features/models/Order.model';
 import { getCouponByCode } from '../features/controllers/couponService';
 import { useAuth } from './AuthContext';
+//----------------------------------------------------------
+// Tạo context giỏ hàng.
+const CartContext = createContext();//-- dùng để chia sẻ dữ liệu giỏ hàng giữa các component.
 
-const CartContext = createContext();
-const CART_KEY_PREFIX = 'foodhub_cart'; 
-
+const CART_KEY_PREFIX = 'foodhub_cart'; //-- dùng để lưu dữ liệu giỏ hàng vào localStorage.
+//----------------------------------------------------------
+// Hàm reducer để xử lý các hành động trên giỏ hàng.
 const cartReducer = (state, action) => {
+  //-- kiểm tra loại hành động trên giỏ hàng.
   switch (action.type) {
+    //-- thêm sản phẩm vào giỏ hàng.
     case 'ADD_TO_CART': {
-      // Handle both { product, quantity } and legacy product-only payloads
+      //-- xử lý thêm sản phẩm vào giỏ hàng.
       const product = action.payload.product || action.payload;
+      //-- lấy số lượng sản phẩm từ payload.
       const quantity = action.payload.quantity ?? 1;
-      
+      //-- kiểm tra sản phẩm đã tồn tại trong giỏ hàng hay chưa.
       const existing = state.find((item) => item.id === product.id);
+      //-- lấy số lượng tồn kho sản phẩm từ payload.
       const stock = product.stock ?? 999;
+      //-- kiểm tra sản phẩm đã tồn tại trong giỏ hàng hay chưa.
       
       if (existing) {
+        //-- tính tổng số lượng sản phẩm trong giỏ hàng.
         const newQuantity = existing.quantity + quantity;
+        // nếu số lượng sản phẩm lớn hơn số lượng tồn kho thì hiển thị thông báo lỗi.
         if (newQuantity > stock) {
           alert('Rất tiếc, sản phẩm này đã hết hàng hoặc đạt giới hạn kho!');
           return state;
-        }
+        }//-- cập nhật số lượng sản phẩm trong giỏ hàng.
         return state.map((item) => item.id === product.id ? { ...item, quantity: newQuantity } : item);
       }
       return [...state, { ...product, quantity }];

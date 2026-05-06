@@ -5,6 +5,7 @@ import { useCart } from '../../contexts/CartContext';
 
 const fmt = n => (typeof n === 'number' ? n.toLocaleString('vi-VN') + 'đ' : n);
 const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
+const API_BASE = process.env.REACT_APP_API_URL || 'http://localhost:5000';
 
 const Orders = () => {
   const { isAuthenticated, userProfile } = useAuth();
@@ -20,7 +21,6 @@ const Orders = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // tự điền
   useEffect(() => {
     if (userProfile) {
       setPhone(userProfile.phone || '');
@@ -28,7 +28,6 @@ const Orders = () => {
     }
   }, [userProfile]);
 
-  // xóa lỗi khi sửa
   useEffect(() => { if (error) setError(''); }, [phone, address, tableId]);
 
   if (!isAuthenticated) {
@@ -71,28 +70,39 @@ const Orders = () => {
 
     setLoading(true);
     try {
+      const resolvedPaymentMethod = orderType === 'DINE_IN' ? 'COD' : paymentMethod;
       const orderId = await checkout({
         type: orderType,
         tableId: orderType === 'DINE_IN' ? tableId : null,
         phone,
         address,
-        paymentMethod: orderType === 'DINE_IN' ? 'CASH' : paymentMethod,
+        paymentMethod: resolvedPaymentMethod,
         note,
         coupon: appliedCoupon || null,
-        requirePaymentPage: orderType !== 'DINE_IN' && paymentMethod !== 'COD',
       });
 
-      if (orderType !== 'DINE_IN' && paymentMethod === 'MOMO') {
-        navigate(`/checkout/${orderId}?method=momo`, { replace: true });
+      if (orderType !== 'DINE_IN' && resolvedPaymentMethod === 'VNPAY') {
+        const response = await fetch(`${API_BASE}/api/vnpay/create-payment-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId,
+            amount: finalTotal,
+            orderInfo: `Thanh toan don hang ${orderId}`,
+            locale: 'vn',
+          }),
+        });
+
+        const data = await response.json();
+        if (!response.ok || !data?.success || !data?.paymentUrl) {
+          throw new Error(data?.message || 'Không tạo được URL thanh toán VNPay');
+        }
+
+        window.location.href = data.paymentUrl;
         return;
       }
 
-      if (orderType !== 'DINE_IN' && paymentMethod === 'VNPAY') {
-        navigate(`/checkout/${orderId}?method=vnpay`, { replace: true });
-        return;
-      }
-
-      navigate('/my-orders', { state: { success: true } });
+      navigate(`/checkout/${orderId}?status=success`, { replace: true });
     } catch (err) {
       setError(err.message || 'Đặt hàng thất bại');
     } finally {
@@ -139,7 +149,7 @@ const Orders = () => {
                       <label className="form-label fw-semibold">Thanh toán</label>
                       <select className="form-select" value={paymentMethod} onChange={e=>setPaymentMethod(e.target.value)}>
                         <option value="COD">Tiền mặt khi nhận</option>
-                        <option value="MOMO">Ví MoMo</option>
+                        <option value="VNPAY">VNPay</option>
                       </select>
                     </div>
                     <div className="col-12">

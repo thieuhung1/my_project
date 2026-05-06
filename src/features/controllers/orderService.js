@@ -25,6 +25,8 @@ export const PRODUCTS_COLLECTION = "products";
 
 const ORDER_STATUS_SET = new Set(Object.values(ORDER_STATUS));
 const PAYMENT_STATUS_SET = new Set(Object.values(PAYMENT_STATUS));
+const PAYMENT_METHOD_SET = new Set(Object.values(PAYMENT_METHOD));
+const PAYMENT_PROVIDER_SET = new Set(Object.values(PAYMENT_PROVIDER));
 
 const ensureProductStock = async (transaction, item) => {
   const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
@@ -58,6 +60,8 @@ const updateOrderDoc = async (orderId, data) => {
 
 const normalizeOrderStatus = (status) => (ORDER_STATUS_SET.has(status) ? status : ORDER_STATUS.PENDING);
 const normalizePaymentStatus = (status) => (PAYMENT_STATUS_SET.has(status) ? status : PAYMENT_STATUS.UNPAID);
+const normalizePaymentMethod = (method) => (PAYMENT_METHOD_SET.has(method) ? method : PAYMENT_METHOD.COD);
+const normalizePaymentProvider = (provider) => (PAYMENT_PROVIDER_SET.has(provider) ? provider : PAYMENT_PROVIDER.LOCAL);
 
 export const createOrder = async (orderData) => {
   return await runTransaction(db, async (transaction) => {
@@ -73,14 +77,20 @@ export const createOrder = async (orderData) => {
 
     const orderRef = doc(collection(db, COLLECTION_NAME));
     const initialStatus = orderData.type === "DINE_IN" ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
+    const paymentMethod = normalizePaymentMethod(orderData.paymentMethod);
+    const paymentProvider = normalizePaymentProvider(orderData.paymentProvider);
+    const paymentStatus =
+      paymentMethod === PAYMENT_METHOD.VNPAY && orderData.paymentStatus !== PAYMENT_STATUS.PAID
+        ? PAYMENT_STATUS.PENDING
+        : normalizePaymentStatus(orderData.paymentStatus);
 
     transaction.set(orderRef, {
       ...orderData,
       items,
       status: normalizeOrderStatus(initialStatus),
-      paymentMethod: orderData.paymentMethod || PAYMENT_METHOD.COD,
-      paymentStatus: normalizePaymentStatus(orderData.paymentStatus),
-      paymentProvider: orderData.paymentProvider || PAYMENT_PROVIDER.LOCAL,
+      paymentMethod,
+      paymentStatus,
+      paymentProvider,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

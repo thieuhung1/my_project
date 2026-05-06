@@ -1,12 +1,14 @@
 // ============================================================
 // App.js - Điểm khởi động ứng dụng Food Hub
-// Bọc toàn bộ app với các Context Provider của Firebase
+// Chỉ ghép providers, router và layout chung
 // ============================================================
 
-import { BrowserRouter, Route, Routes, Link, useLocation } from 'react-router-dom';
+import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';
 import '../styles/App.css';
 import '../styles/AdminShortcutIcon.css';
 import 'bootstrap/dist/css/bootstrap.min.css';
+
+import AppProviders from './providers/AppProviders';
 
 // ── Pages ──────────────────────────────────────────────────
 import Home from '../Pages/Home/Index';
@@ -34,23 +36,24 @@ import Footer from '../components/layout/Footer/Index';
 import SupportChatIcon from '../components/features/SupportChatIcon/index';
 import ChatbotIcon from '../components/features/ChatbotIcon/index';
 
-// ── Context Providers ──────────────────────────────────────
-import { AuthProvider } from '../contexts/AuthContext';
-import { ProductProvider } from '../contexts/ProductContext';
-import { CartProvider } from '../contexts/CartContext';
-
-const NotFound = () => (
-  <div className="container my-5 text-center fade-in-up">
-    <h2>404 - Không tìm thấy trang</h2>
-    <p className="text-muted">Trang bạn tìm kiếm không tồn tại.</p>
-    <Link to="/" className="btn btn-warning px-4">
-      Về trang chủ
-    </Link>
-  </div>
-);
+const NotFound = () => {
+  return (
+    <div className="container my-5 text-center">
+      <div className="display-1 mb-3">🔒</div>
+      <h2 className="fw-bold">Trang không tồn tại</h2>
+      <p className="text-muted mb-4">
+        Trang bạn tìm kiếm không tồn tại. Vui lòng kiểm tra lại đường dẫn.
+      </p>
+      <Link to="/" className="btn btn-warning">
+        Quay về trang chủ
+      </Link>
+    </div>
+  );
+};
 
 const BottomNav = () => {
   const location = useLocation();
+
   const items = [
     { to: '/', icon: 'bi-house', label: 'Trang chủ' },
     { to: '/products', icon: 'bi-grid', label: 'Menu' },
@@ -62,7 +65,11 @@ const BottomNav = () => {
   return (
     <nav className="bottom-nav d-md-none">
       {items.map((item) => (
-        <Link key={item.to} to={item.to} className={location.pathname === item.to ? 'active' : ''}>
+        <Link
+          key={item.to}
+          to={item.to}
+          className={location.pathname === item.to ? 'active' : ''}
+        >
           <i className={`bi ${item.icon}`} />
           {item.label}
         </Link>
@@ -71,61 +78,67 @@ const BottomNav = () => {
   );
 };
 
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/products" element={<Products />} />
+      <Route path="/menu" element={<Products />} />
+      <Route path="/promo" element={<Products />} />
+      <Route path="/product/:id" element={<ProductDetail />} />
+      <Route path="/cart" element={<Cart />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route path="/login" element={<SignIn />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route path="/my-list" element={<MyList />} />
+      <Route path="/orders" element={<Orders />} />
+      <Route
+        path="/my-orders"
+        element={
+          <ProtectedRoute>
+            <MyOrders />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/search" element={<Search />} />
+      <Route path="/checkout/:orderId" element={<Checkout />} />
+      <Route path="/my-account" element={<MyAccount />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/about" element={<About />} />
+
+      <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+        <Route path="/admin" element={<Admin />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>
+        <Route path="/shipper" element={<Shipper />} />
+      </Route>
+
+      <Route element={<ProtectedRoute allowedRoles={['waiter', 'admin']} />}>
+        <Route path="/waiter" element={<Waiter />} />
+      </Route>
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
+
 function App() {
   return (
-    <AuthProvider>
-      <ProductProvider>
-        <CartProvider>
-          <BrowserRouter>
-            <div className="App">
-              <Header />
-              <main>
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/products" element={<Products />} />
-                  <Route path="/menu" element={<Products />} />
-                  <Route path="/promo" element={<Products />} />
-                  <Route path="/product/:id" element={<ProductDetail />} />
-                  <Route path="/cart" element={<Cart />} />
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route path="/login" element={<SignIn />} />
-                  <Route path="/signup" element={<SignUp />} />
-                  <Route path="/my-list" element={<MyList />} />
-                  <Route path="/orders" element={<Orders />} />
-                  <Route
-                    path="/my-orders"
-                    element={
-                      <ProtectedRoute>
-                        <MyOrders />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route path="/search" element={<Search />} />
-                  <Route path="/checkout/:orderId" element={<Checkout />} />
-                  <Route path="/my-account" element={<MyAccount />} />
-                  <Route path="/contact" element={<Contact />} />
-                  <Route path="/about" element={<About />} />
-                  <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                    <Route path="/admin" element={<Admin />} />
-                  </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['staff', 'admin']} />}>
-                    <Route path="/shipper" element={<Shipper />} />
-                  </Route>
-                  <Route element={<ProtectedRoute allowedRoles={['waiter', 'admin']} />}>
-                    <Route path="/waiter" element={<Waiter />} />
-                  </Route>
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-              <Footer />
-              <SupportChatIcon />
-              <ChatbotIcon />
-              <BottomNav />
-            </div>
-          </BrowserRouter>
-        </CartProvider>
-      </ProductProvider>
-    </AuthProvider>
+    <AppProviders>
+      <BrowserRouter>
+        <div className="App">
+          <Header />
+          <main>
+            <AppRoutes />
+          </main>
+          <Footer />
+          <SupportChatIcon />
+          <ChatbotIcon />
+          <BottomNav />
+        </div>
+      </BrowserRouter>
+    </AppProviders>
   );
 }
 

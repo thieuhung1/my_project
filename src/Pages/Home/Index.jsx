@@ -1,14 +1,22 @@
+// Home.jsx - Trang chủ của FoodHub
+//----------------------------------------------------
+// Import các thư viện cần thiết cho trang chủ
 import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
-
+import phoBoImage from '../../ASSETS/Images/phở bò.jpeg';
+import banhXeoImage from '../../ASSETS/Images/bánh xèo.jpg';
+//----------------------------------------------------------
+// Hàm format tiền theo kiểu Việt Nam để hiển thị đồng nhất.
 const currency = (n) => typeof n === 'number' ? n.toLocaleString('vi-VN') + '₫' : n;
-
+//----------------------------------------------------------
+// Hàm xử lý lỗi ảnh khi ảnh chính bị lỗi tải.
 const handleImageError = (e) => {
-  e.currentTarget.src = '/ASSETS/Images/placeholder.jpg';
+  e.currentTarget.src = phoBoImage;
 };
-
+//----------------------------------------------------------
+// Hàm hiển thị toast message khi thêm sản phẩm vào giỏ hàng.
 const showToast = (msg) => {
   const el = document.createElement('div');
   el.innerHTML = `<div style="position:fixed;bottom:24px;right:24px;background:var(--success);color:white;padding:12px 18px;border-radius:12px;box-shadow:var(--shadow-md);z-index:9999;font-weight:500;animation:fadeInUp .3s ease">${msg}</div>`;
@@ -16,6 +24,9 @@ const showToast = (msg) => {
   setTimeout(() => document.body.lastChild?.remove(), 2000);
 };
 
+
+//----------------------------------------------------------
+// Hàm hiển thị skeleton card khi đang tải dữ liệu.
 const SkeletonCard = () => (
   <div className="col-lg-4 col-md-6 mb-4">
     <div className="card h-100 border-0 shadow-sm">
@@ -32,18 +43,24 @@ const SkeletonCard = () => (
   </div>
 );
 
+//----------------------------------------------------------
+// Dữ liệu USP (Unique Selling Proposition) để hiển thị trên trang chủ.
 const USP_ITEMS = [
   { icon: 'bi-lightning-charge', title: 'Giao nhanh 30’', sub: 'Nội thành Vinh' },
   { icon: 'bi-shield-check', title: 'VSATTP', sub: 'Nguồn gốc rõ ràng' },
   { icon: 'bi-percent', title: 'Ưu đãi mỗi ngày', sub: 'Giảm tới 50%' },
 ];
 
+//----------------------------------------------------------
+// Dữ liệu đánh giá khách hàng để hiển thị trên trang chủ.
 const TESTIMONIALS = [
   { text: 'Giao hàng siêu nhanh, đồ ăn còn nóng hổi!', name: 'Nguyễn Văn A', role: 'Khách quen' },
   { text: 'Khuyến mãi hấp dẫn, app dễ dùng. Yêu FoodHub!', name: 'Trần Thị B', role: 'Foodie' },
   { text: 'Đóng gói sạch sẽ, shipper thân thiện. 5 sao!', name: 'Lê Văn C', role: 'Member' },
 ];
 
+//----------------------------------------------------------
+// Hàm Home để hiển thị trang chủ.
 const Home = () => {
   const { products, loading } = useProducts();
   const { addToCart } = useCart();
@@ -56,6 +73,8 @@ const Home = () => {
     showToast(`Đã thêm ${product.name}`);
   };
 
+  //----------------------------------------------------------
+  // JSX để hiển thị trang chủ.
   return (
     <>
       {/* Hero */}
@@ -66,7 +85,7 @@ const Home = () => {
         </div>
         <div className="carousel-inner" style={{borderRadius:'0 0 var(--border-radius) var(--border-radius)', overflow:'hidden'}}>
           <div className="carousel-item active position-relative">
-            <img src="/ASSETS/Images/pho-bo.jpeg" className="d-block w-100" alt="Phở bò" style={{objectFit:'cover', height:'72vh', minHeight:440}} onError={handleImageError} />
+            <img src={phoBoImage} className="d-block w-100" alt="Phở bò" style={{objectFit:'cover', height:'72vh', minHeight:440}} onError={handleImageError} />
             <div className="position-absolute top-0 start-0 w-100 h-100" style={{background:'linear-gradient(180deg, rgba(0,0,0,.2), rgba(0,0,0,.6))'}} />
             <div className="carousel-caption text-start" style={{bottom:'18%'}}>
               <h1 className="display-5 fw-bold mb-3 text-gradient-orange" style={{fontFamily:'Roboto Condensed, sans-serif'}}>Đồ Ăn Ngon Giao Nhanh</h1>
@@ -78,7 +97,7 @@ const Home = () => {
             </div>
           </div>
           <div className="carousel-item position-relative">
-            <img src="/ASSETS/Images/banh-xeo.jpg" className="d-block w-100" alt="Bánh xèo" style={{objectFit:'cover', height:'72vh', minHeight:440}} onError={handleImageError} />
+            <img src={banhXeoImage} className="d-block w-100" alt="Bánh xèo" style={{objectFit:'cover', height:'72vh', minHeight:440}} onError={handleImageError} />
             <div className="position-absolute top-0 start-0 w-100 h-100" style={{background:'linear-gradient(180deg, rgba(0,0,.2), rgba(0,0,0,.6))'}} />
             <div className="carousel-caption text-start" style={{bottom:'18%'}}>
               <h2 className="display-6 fw-bold text-white mb-3">Giảm 50% Đơn Đầu</h2>
@@ -121,7 +140,7 @@ const Home = () => {
               <div key={product.id} className="col-lg-4 col-md-6 mb-4" style={{animationDelay:`${idx*60}ms`}}>
                 <div className="card h-100 border-0 shadow-sm hover-lift overflow-hidden" style={{borderRadius:'var(--border-radius)'}}>
                   <div className="position-relative">
-                    <img src={product.imageUrl || product.image || '/ASSETS/Images/placeholder.jpg'} className="card-img-top" alt={product.name} loading="lazy" style={{height:220, objectFit:'cover'}} onError={handleImageError}/>
+                    <img src={product.imageUrl || product.image || phoBoImage} className="card-img-top" alt={product.name} loading="lazy" style={{height:220, objectFit:'cover'}} onError={handleImageError}/>
                     {product.tag && <span className="badge bg-warning text-dark position-absolute top-0 start-0 m-2">{product.tag}</span>}
                     {typeof product.rating === 'number' && (
                       <span className="badge bg-dark bg-opacity-75 position-absolute top-0 end-0 m-2"><i className="bi bi-star-fill text-warning me-1"/>{product.rating.toFixed(1)}</span>

@@ -24,9 +24,9 @@
  * @property {number}      discountAmount - Số tiền giảm giá
  * @property {string}      couponId       - ID mã giảm giá (nếu có)
  * @property {string}      couponCode     - Mã giảm giá (nếu có)
- * @property {string}      paymentMethod  - Phương thức thanh toán (COD)
+ * @property {string}      paymentMethod  - Phương thức thanh toán (COD, VNPAY)
  * @property {string}      paymentStatus  - Trạng thái thanh toán (UNPAID/PENDING/PAID/FAILED)
- * @property {string}      paymentProvider - Nhà cung cấp thanh toán (LOCAL)
+ * @property {string}      paymentProvider - Nhà cung cấp thanh toán (LOCAL, VNPAY)
  * @property {string}      paidAt         - Thời điểm thanh toán thành công
  * @property {string}      status         - Trạng thái đơn hàng (UPPERCASE)
  * @property {string}      type           - Loại đơn (DELIVERY/DINE_IN)
@@ -40,6 +40,7 @@
 
 export const PAYMENT_METHOD = {
   COD: "COD",
+  VNPAY: "VNPAY",
 };
 
 export const PAYMENT_STATUS = {
@@ -51,6 +52,7 @@ export const PAYMENT_STATUS = {
 
 export const PAYMENT_PROVIDER = {
   LOCAL: "LOCAL",
+  VNPAY: "VNPAY",
 };
 
 export const ORDER_STATUS = {
