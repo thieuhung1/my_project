@@ -44,11 +44,17 @@ const createVnpayRouter = () => {
       const { orderId, amount, orderInfo, bankCode, locale } = req.body || {};
 
       if (!orderId) {
-        return res.status(400).json({ success: false, message: 'orderId là bắt buộc' });
+        return res.status(400).json({
+          success: false,
+          message: 'orderId là bắt buộc',
+        });
       }
 
       if (!amount || Number(amount) <= 0) {
-        return res.status(400).json({ success: false, message: 'amount phải lớn hơn 0' });
+        return res.status(400).json({
+          success: false,
+          message: 'amount phải lớn hơn 0',
+        });
       }
 
       const { paymentUrl, txnRef } = createPaymentUrl({
@@ -67,7 +73,11 @@ const createVnpayRouter = () => {
       });
     } catch (error) {
       console.error('VNPay create-payment-url error:', error);
-      return res.status(500).json({ success: false, message: error.message });
+
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+      });
     }
   });
 
@@ -81,6 +91,7 @@ const createVnpayRouter = () => {
 
       if (isPaid && orderId) {
         const orderRef = getOrderRef(orderId);
+
         await updateDoc(orderRef, {
           paymentStatus: 'PAID',
           paidAt: serverTimestamp(),
@@ -95,6 +106,7 @@ const createVnpayRouter = () => {
       return res.redirect(frontendRedirect);
     } catch (error) {
       console.error('VNPay return error:', error);
+
       const fallback = buildFrontendResultUrl(orderId, false);
       return res.redirect(fallback);
     }

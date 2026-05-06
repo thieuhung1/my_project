@@ -2,21 +2,18 @@ import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebase.Config";
 import { PAYMENT_PROVIDER, PAYMENT_STATUS } from "../models/Order.model";
 
-//-----Tạo thanh toán VNPAY-----
-const FIREBASE_PROJECT_ID = "do-an-food-hub";
-const FUNCTIONS_REGION = "us-central1";
-const VNPAY_API_BASE_URL = `http://127.0.0.1:5001/${FIREBASE_PROJECT_ID}/${FUNCTIONS_REGION}/vnpayApi`;
+const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || "http://localhost:5000/api";
 const DEFAULT_RETURN_PATH = "/vnpay-return";
 
 export const createVnpayPayment = async ({
-  orderId,//ID đơn hàng
-  amount,//Số tiền
-  orderInfo,//Thông tin đơn hàng
-  returnUrl,//URL trả về
-  ipAddr,//IP người dùng
-  bankCode,//Mã ngân hàng
+  orderId,
+  amount,
+  orderInfo,
+  returnUrl,
+  ipAddr,
+  bankCode,
 }) => {
-  const response = await fetch(`${VNPAY_API_BASE_URL}/create-payment`, {
+  const response = await fetch(`${API_BASE_URL}/vnpay/create-payment-url`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -32,6 +29,7 @@ export const createVnpayPayment = async ({
   });
 
   const data = await response.json();
+
   if (!response.ok || !data.success) {
     throw new Error(data.message || "Không tạo được payment URL");
   }

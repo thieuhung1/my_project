@@ -15,7 +15,6 @@ const getConfig = () => {
   return {
     tmnCode,
     secureSecret,
-    vnpayHost: process.env.VNPAY_HOST || VNPAY_SANDBOX_HOST,
     backendBaseUrl: process.env.BACKEND_BASE_URL || `http://localhost:${process.env.BACKEND_PORT || 5000}`,
     frontendBaseUrl: process.env.FRONTEND_BASE_URL || `http://localhost:${process.env.FRONTEND_PORT || 3000}`,
     locale: process.env.VNPAY_LOCALE || 'vn',
@@ -27,6 +26,7 @@ const getVnpayClient = () => {
   if (cachedVnpay) return cachedVnpay;
 
   const config = getConfig();
+
   cachedVnpay = new VNPay({
     tmnCode: config.tmnCode,
     secureSecret: config.secureSecret,
@@ -37,7 +37,9 @@ const getVnpayClient = () => {
   return cachedVnpay;
 };
 
-const generateId = () => Date.now().toString();
+const generateId = () => {
+  return Date.now().toString();
+};
 
 const buildCallbackUrl = () => {
   const config = getConfig();
@@ -51,6 +53,7 @@ const buildFrontendResultUrl = (orderId, success = false) => {
 
 const getClientIp = (req) => {
   const forwardedFor = req.headers['x-forwarded-for'];
+
   if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
     return forwardedFor.split(',')[0].trim();
   }
@@ -79,7 +82,10 @@ const createPaymentUrl = ({ orderId, amount, orderInfo, bankCode, ipAddr, locale
     ...(bankCode ? { vnp_BankCode: bankCode } : {}),
   });
 
-  return { paymentUrl, txnRef };
+  return {
+    paymentUrl,
+    txnRef,
+  };
 };
 
 const verifyReturnQuery = (query) => {
@@ -93,7 +99,10 @@ const verifyReturnQuery = (query) => {
     return vnpay.verifyIpnCall(query);
   }
 
-  return { isVerified: true, ...query };
+  return {
+    isVerified: true,
+    ...query,
+  };
 };
 
 const isSuccessfulVnpayReturn = (query, verificationResult) => {
@@ -103,7 +112,11 @@ const isSuccessfulVnpayReturn = (query, verificationResult) => {
     verificationResult?.isSuccess === true ||
     verificationResult?.vnp_ResponseCode;
 
-  return Boolean(verified) && String(query.vnp_ResponseCode || '') === '00' && String(query.vnp_TransactionStatus || '00') === '00';
+  return (
+    Boolean(verified) &&
+    String(query.vnp_ResponseCode || '') === '00' &&
+    String(query.vnp_TransactionStatus || '00') === '00'
+  );
 };
 
 module.exports = {
