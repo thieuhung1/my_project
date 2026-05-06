@@ -5,7 +5,7 @@ import {
   updateCoupon,
   deleteCoupon,
   toggleCouponStatus,
-} from '../../services';
+} from '../../features/services';
 
 export default function CouponManager() {
   const [coupons, setCoupons] = useState([]);

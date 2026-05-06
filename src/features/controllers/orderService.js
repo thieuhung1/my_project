@@ -77,6 +77,7 @@ export const createOrder = async (orderData) => {
 
     const orderRef = doc(collection(db, COLLECTION_NAME));
     const initialStatus = orderData.type === "DINE_IN" ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
+
     const paymentMethod = normalizePaymentMethod(orderData.paymentMethod);
     const paymentProvider = normalizePaymentProvider(orderData.paymentProvider);
     const paymentStatus =
@@ -84,13 +85,22 @@ export const createOrder = async (orderData) => {
         ? PAYMENT_STATUS.PENDING
         : normalizePaymentStatus(orderData.paymentStatus);
 
+    const initialPaymentStatus =
+      orderData.paymentMethod === PAYMENT_METHOD.VNPAY ? PAYMENT_STATUS.PENDING : normalizePaymentStatus(orderData.paymentStatus);
+
+
     transaction.set(orderRef, {
       ...orderData,
       items,
       status: normalizeOrderStatus(initialStatus),
+
       paymentMethod,
       paymentStatus,
       paymentProvider,
+
+      paymentMethod: normalizePaymentMethod(orderData.paymentMethod),
+      paymentStatus: initialPaymentStatus,
+      paymentProvider: normalizePaymentProvider(orderData.paymentProvider),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });

@@ -37,76 +37,86 @@
  * @property {Date}        createdAt      - Thời gian đặt hàng
  * @property {Date}        updatedAt      - Thời gian cập nhật
  */
-
+//-----Phương thức thanh toán-----
 export const PAYMENT_METHOD = {
+
   COD: "COD",
   VNPAY: "VNPAY",
-};
 
+  COD: "COD",//thanh toán khi nhận hàng
+  VNPAY: "VNPAY",//thanh toán qua VNPAY
+
+};
+//-----Trạng thái thanh toán-----
 export const PAYMENT_STATUS = {
-  UNPAID: "UNPAID",
-  PENDING: "PENDING",
-  PAID: "PAID",
-  FAILED: "FAILED",
+  UNPAID: "UNPAID",//chưa thanh toán
+  PENDING: "PENDING",//đang xử lý
+  PAID: "PAID",//đã thanh toán
+  FAILED: "FAILED",//thất bại
 };
-
+//-----Nhà cung cấp thanh toán-----
 export const PAYMENT_PROVIDER = {
+
   LOCAL: "LOCAL",
   VNPAY: "VNPAY",
-};
 
+  LOCAL: "LOCAL",//thanh toán qua Local
+  VNPAY: "VNPAY",//thanh toán qua VNPAY
+
+};
+//-----Trạng thái đơn hàng-----
 export const ORDER_STATUS = {
-  PENDING: "PENDING",
-  WAITING_FOR_SHIPPER: "WAITING_FOR_SHIPPER",
-  CONFIRMED: "CONFIRMED",
-  DELIVERING: "DELIVERING",
-  COMPLETED: "COMPLETED",
-  FAILED: "FAILED",
-  CANCELLED: "CANCELLED",
+  PENDING: "PENDING",//chờ xử lý
+  WAITING_FOR_SHIPPER: "WAITING_FOR_SHIPPER",//chờ shipper
+  CONFIRMED: "CONFIRMED",//đã xác nhận
+  DELIVERING: "DELIVERING",//đang giao hàng
+  COMPLETED: "COMPLETED",//hoàn thành
+  FAILED: "FAILED",//thất bại
+  CANCELLED: "CANCELLED",//đã hủy
 };
-
+//-----Label trạng thái đơn hàng-----
 export const ORDER_STATUS_LABEL = {
-  PENDING: "Chờ xử lý",
-  WAITING_FOR_SHIPPER: "Chờ shipper",
-  CONFIRMED: "Đã xác nhận",
+  PENDING: "Chờ xử lý",//chờ xử lý
+  WAITING_FOR_SHIPPER: "Chờ shipper",//chờ shipper
+  CONFIRMED: "Đã xác nhận",//đã xác nhận
   DELIVERING: "Đang giao hàng",
-  COMPLETED: "Hoàn thành",
-  FAILED: "Thất bại",
-  CANCELLED: "Đã hủy",
+  COMPLETED: "Hoàn thành",//hoàn thành
+  FAILED: "Thất bại",//thất bại
+  CANCELLED: "Đã hủy",//đã hủy
 };
-
+//-----Màu sắc trạng thái đơn hàng-----
 export const ORDER_STATUS_COLOR = {
-  PENDING: "warning",
+  PENDING: "warning",//warning
   WAITING_FOR_SHIPPER: "secondary",
-  CONFIRMED: "info",
+  CONFIRMED: "info",//info
   DELIVERING: "primary",
-  COMPLETED: "success",
-  FAILED: "danger",
-  CANCELLED: "dark",
-};
-
+  COMPLETED: "success",//success
+  FAILED: "danger",//danger
+  CANCELLED: "dark",//dark - đen
+};//dark - đen
+//-----Tạo model đơn hàng-----
 export const createOrderModel = (overrides = {}) => ({
-  userId: "",
-  userName: "",
-  phone: "",
-  address: "",
-  items: [],
-  subtotal: 0,
-  totalAmount: 0,
-  discountAmount: 0,
-  couponId: "",
-  couponCode: "",
-  paymentMethod: PAYMENT_METHOD.COD,
-  paymentStatus: PAYMENT_STATUS.UNPAID,
-  paymentProvider: PAYMENT_PROVIDER.LOCAL,
-  paidAt: null,
-  status: ORDER_STATUS.PENDING,
-  type: "DELIVERY",
-  table_id: "",
-  note: "",
-  shipperId: "",
-  shipperName: "",
-  ...overrides,
+  userId: "",//ID người dùng
+  userName: "",//Tên người dùng
+  phone: "",//Số điện thoại
+  address: "",//Địa chỉ
+  items: [],//Danh sách sản phẩm
+  subtotal: 0,//Tạm tính trước giảm giá
+  totalAmount: 0,//Tổng tiền đơn hàng (sau giảm giá)
+  discountAmount: 0,//Số tiền giảm giá
+  couponId: "",//ID mã giảm giá
+  couponCode: "",//Mã giảm giá
+  paymentMethod: PAYMENT_METHOD.COD,//Phương thức thanh toán
+  paymentStatus: PAYMENT_STATUS.UNPAID,//Trạng thái thanh toán
+  paymentProvider: PAYMENT_PROVIDER.LOCAL,//Nhà cung cấp thanh toán
+  paidAt: null,//Thời điểm thanh toán thành công
+  status: ORDER_STATUS.PENDING,//Trạng thái đơn hàng
+  type: "DELIVERY",//Loại đơn (DELIVERY/DINE_IN)
+  table_id: "",//Mã bàn (nếu DINE_IN)
+  note: "",//Ghi chú của khách hàng
+  shipperId: "",//ID shipper (nếu có)
+  shipperName: "",//Tên shipper (nếu có)
+  ...overrides,//Override các giá trị
 });
 
 /**

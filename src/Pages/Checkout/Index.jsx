@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { getOrderById, updatePaymentStatus } from '../../features/controllers/orderService';
-import { PAYMENT_METHOD, PAYMENT_STATUS } from '../../features/models/Order.model';
+import { PAYMENT_STATUS, PAYMENT_METHOD } from '../../features/models/Order.model';
+import { openVnpayPayment } from '../../features/controllers/paymentService';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import '../../styles/Checkout.css';
 
@@ -20,7 +21,7 @@ const Checkout = () => {
   const [loading, setLoading] = useState(true);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [step, setStep] = useState(1);
-  const [statusMessage, setStatusMessage] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     const loadOrder = async () => {
@@ -37,14 +38,16 @@ const Checkout = () => {
         setLoading(false);
       }
     };
+
     if (orderId) loadOrder();
   }, [orderId]);
 
   const amount = useMemo(() => order?.totalAmount || order?.subtotal || 0, [order]);
   const discount = useMemo(() => order?.discountAmount || 0, [order]);
-  const method = searchParams.get('method') || order?.paymentMethod;
-  const paymentStatus = searchParams.get('status');
-  const isVnpay = method === PAYMENT_METHOD.VNPAY;
+  const paymentMethod = order?.paymentMethod || PAYMENT_METHOD.COD;
+  const methodFromQuery = searchParams.get('method');
+  const paymentStatusFromQuery = searchParams.get('status');
+  const isVnpay = (methodFromQuery || paymentMethod) === PAYMENT_METHOD.VNPAY;
 
   const fmt = useCallback((n) => {
     if (typeof n !== 'number') return '0₫';
@@ -53,21 +56,47 @@ const Checkout = () => {
 
   useEffect(() => {
     const syncPaidState = async () => {
-      if (!orderId || paymentStatus !== 'success') return;
+      if (!orderId || paymentStatusFromQuery !== 'success') return;
+
       try {
         await updatePaymentStatus(orderId, PAYMENT_STATUS.PAID);
         setPaymentSuccess(true);
         setStep(3);
         setOrder((prev) => (prev ? { ...prev, paymentStatus: PAYMENT_STATUS.PAID } : prev));
-        setStatusMessage('Thanh toán VNPay thành công.');
       } catch (error) {
         console.error('Update VNPay payment status failed:', error);
-        setStatusMessage('Thanh toán thành công nhưng chưa cập nhật được trạng thái đơn hàng.');
       }
     };
 
     syncPaidState();
-  }, [orderId, paymentStatus]);
+  }, [orderId, paymentStatusFromQuery]);
+
+  const handleConfirm = async () => {
+    if (!order || !orderId) return;
+    setSubmitting(true);
+
+    try {
+      if (paymentMethod === PAYMENT_METHOD.VNPAY) {
+        await updatePaymentStatus(orderId, PAYMENT_STATUS.PENDING);
+        await openVnpayPayment({
+          orderId,
+          amount,
+          orderInfo: `Thanh toán đơn hàng ${orderId}`,
+        });
+        return;
+      }
+
+      await updatePaymentStatus(orderId, PAYMENT_STATUS.PAID);
+      setPaymentSuccess(true);
+      setStep(3);
+      setOrder((prev) => (prev ? { ...prev, paymentStatus: PAYMENT_STATUS.PAID } : prev));
+    } catch (error) {
+      console.error('Confirm payment error:', error);
+      alert(error.message || 'Không thể xử lý thanh toán');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -114,8 +143,6 @@ const Checkout = () => {
             <h2 className="fw-bold mb-2">Thanh toán thành công!</h2>
             <p className="text-muted mb-4">Đơn hàng #{orderId?.slice(-6).toUpperCase()} đã được ghi nhận.</p>
 
-            {statusMessage && <div className="alert alert-success">{statusMessage}</div>}
-
             <div className="bg-light rounded-3 p-3 mb-4">
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Tổng tiền</span>
@@ -123,7 +150,9 @@ const Checkout = () => {
               </div>
               <div className="d-flex justify-content-between mb-2">
                 <span className="text-muted">Phương thức</span>
-                <span className="fw-bold text-success">{order?.paymentMethod || 'COD'}</span>
+                <span className="fw-bold text-success">
+                  {paymentMethod === PAYMENT_METHOD.VNPAY ? 'VNPay' : 'Tiền mặt khi nhận hàng'}
+                </span>
               </div>
               <div className="d-flex justify-content-between">
                 <span className="text-muted">Trạng thái thanh toán</span>
@@ -151,12 +180,17 @@ const Checkout = () => {
         <h1 className="fw-bold text-gradient-orange" style={{ fontFamily: 'Roboto Condensed, sans-serif' }}>
           <i className="bi bi-receipt me-2" />Kết quả thanh toán
         </h1>
-        <p className="text-muted">Mã đơn: <span className="fw-bold">#{orderId?.slice(-6).toUpperCase()}</span></p>
+        <p className="text-muted">
+          Mã đơn: <span className="fw-bold">#{orderId?.slice(-6).toUpperCase()}</span>
+        </p>
       </div>
 
       <div className="order-progress mb-5" style={{ maxWidth: 560, margin: '0 auto 2rem' }}>
         {STEPS.map((s, idx) => (
-          <div key={s.label} className={`progress-step ${idx + 1 < step ? 'completed' : ''} ${idx + 1 === step ? 'active' : ''}`}>
+          <div
+            key={s.label}
+            className={`progress-step ${idx + 1 < step ? 'completed' : ''} ${idx + 1 === step ? 'active' : ''}`}
+          >
             <div className="step-dot">
               {idx + 1 < step ? <i className="bi bi-check-lg" /> : <i className={`bi ${s.icon}`} />}
             </div>
@@ -177,34 +211,39 @@ const Checkout = () => {
             <div className="card-body p-4 p-md-5">
               <h5 className="fw-bold mb-4">Trạng thái đơn hàng</h5>
 
-              {isVnpay ? (
-                <div className="alert alert-warning border-0 d-flex align-items-center gap-3" style={{ borderRadius: 12, background: 'linear-gradient(135deg, #fff4e6, #fff8ef)' }}>
-                  <i className="bi bi-credit-card-2-front text-warning fs-4" />
-                  <div>
-                    <strong>Thanh toán qua VNPay</strong>
-                    <p className="mb-0 small text-muted">
-                      {order?.paymentStatus === PAYMENT_STATUS.PAID
-                        ? 'Giao dịch đã được xác nhận thành công.'
-                        : 'Đơn hàng đang chờ xác nhận thanh toán từ VNPay.'}
-                    </p>
-                  </div>
+              <div
+                className={`alert border-0 d-flex align-items-center gap-3 ${
+                  isVnpay ? 'alert-warning' : 'alert-info'
+                }`}
+                style={{ borderRadius: 12 }}
+              >
+                <i
+                  className={`bi ${
+                    isVnpay ? 'bi-credit-card-2-front text-warning' : 'bi-cash-stack text-primary'
+                  } fs-4`}
+                />
+                <div>
+                  <strong>{isVnpay ? 'Thanh toán qua VNPay' : 'Thanh toán khi nhận hàng'}</strong>
+                  <p className="mb-0 small text-muted">
+                    {isVnpay
+                      ? 'Bạn sẽ được chuyển sang cổng VNPay để hoàn tất thanh toán.'
+                      : 'Bạn sẽ thanh toán cho shipper khi nhận được đơn.'}
+                  </p>
                 </div>
-              ) : (
-                <div className="alert alert-info border-0 d-flex align-items-center gap-3" style={{ borderRadius: 12, background: 'linear-gradient(135deg, #e7f3ff, #f0f8ff)' }}>
-                  <i className="bi bi-cash-stack text-primary fs-4" />
-                  <div>
-                    <strong>Thanh toán khi nhận hàng</strong>
-                    <p className="mb-0 small text-muted">Bạn sẽ thanh toán cho shipper khi nhận được đơn.</p>
-                  </div>
-                </div>
-              )}
+              </div>
 
-              <div className="d-grid gap-2 mt-4">
-                <button className="btn btn-warning text-white rounded-pill" onClick={() => navigate('/my-orders')}>
-                  <i className="bi bi-basket me-2" /> Xem đơn hàng
-                </button>
-                <button className="btn btn-outline-secondary rounded-pill" onClick={() => navigate('/products')}>
-                  <i className="bi bi-shop me-2" /> Tiếp tục mua sắm
+              <div className="mt-4">
+                <button
+                  className="btn btn-warning text-white w-100 btn-lg rounded-pill shadow-orange"
+                  onClick={handleConfirm}
+                  disabled={submitting}
+                >
+                  <i className={`bi ${submitting ? 'bi-hourglass-split' : 'bi-check-circle'} me-2`} />
+                  {submitting
+                    ? 'Đang xử lý...'
+                    : isVnpay
+                      ? 'Thanh toán VNPay'
+                      : 'Xác nhận đặt hàng'}
                 </button>
               </div>
             </div>
@@ -219,19 +258,21 @@ const Checkout = () => {
             transition={{ duration: 0.4, delay: 0.2 }}
           >
             <div className="summary-header">
-              <h5><i className="bi bi-receipt me-2" />Tóm tắt đơn hàng</h5>
+              <h5>
+                <i className="bi bi-receipt me-2" />Tóm tắt đơn hàng
+              </h5>
             </div>
             <div className="summary-body">
               {order?.items?.map((item, idx) => (
                 <div key={idx} className="d-flex align-items-center gap-3 mb-3">
                   <img
                     src={item.imageUrl || '/ASSETS/Images/placeholder.jpg'}
-                    alt={item.name}
+                    alt={item.name || item.productName}
                     className="rounded-3"
                     style={{ width: 60, height: 60, objectFit: 'cover' }}
                   />
                   <div className="flex-grow-1">
-                    <div className="fw-semibold small">{item.productName || item.name}</div>
+                    <div className="fw-semibold small">{item.name || item.productName}</div>
                     <div className="text-muted small">x{item.quantity}</div>
                   </div>
                   <div className="fw-semibold" style={{ color: 'var(--primary-orange)' }}>
