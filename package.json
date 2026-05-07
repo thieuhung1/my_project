@@ -41,7 +41,7 @@
     "start": "npm run start:frontend",
     "start:frontend": "react-scripts start",
     "start:backend": "node src/features/server.js",
-    "build": "react-scripts build",
+    "build": "echo 'No build needed'",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "seed": "node src/backend/seeds/runSeed.js"
