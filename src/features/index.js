@@ -7,6 +7,7 @@ export {
   logout,
   resetPassword,
   onAuthStateChange,
+  loginAnonymously,
   getCurrentUser,
 } from "./controllers/authService";
 
@@ -98,7 +99,14 @@ export {
   updateChatLastMessage,
   sendSupportMessage,
   markChatAsRead,
-} from "./controllers/supportChatService";
+} from './controllers/supportChatService';
+
+export {
+  createNotification,
+  getNotificationsByUser,
+  getAdminNotifications,
+  NOTIFICATION_TYPES,
+} from './controllers/notificationService';
 
 export {
   createProductModel,

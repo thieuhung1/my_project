@@ -6,11 +6,6 @@ import { useCart } from '../../contexts/CartContext';
 // Format tiền theo kiểu Việt Nam để hiển thị đồng nhất.
 const currency = (n) => (typeof n === 'number' ? n.toLocaleString('vi-VN') + '₫' : n);
 
-// Fallback ảnh khi ảnh chính bị lỗi tải.
-const handleImageError = (event) => {
-  event.currentTarget.src = '/ASSETS/Images/placeholder.jpg';
-};
-
 const ITEMS_PER_PAGE = 20;
 
 // Dữ liệu sort để tránh hard-code rải rác trong JSX.
@@ -47,6 +42,7 @@ const Products = () => {
   const [cat, setCat] = useState('Tất cả');
   const [sort, setSort] = useState('moinhat');
   const [page, setPage] = useState(1);
+  const [toast, setToast] = useState('');
 
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category).filter(Boolean));
@@ -77,6 +73,12 @@ const Products = () => {
   // reset page khi filter thay đổi
   useEffect(() => { setPage(1); }, [q, cat, sort]);
 
+  useEffect(() => {
+    if (!toast) return undefined;
+    const t = setTimeout(() => setToast(''), 3000);
+    return () => clearTimeout(t);
+  }, [toast]);
+
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
   const paginated = useMemo(() => {
     const start = (page - 1) * ITEMS_PER_PAGE;
@@ -90,12 +92,22 @@ const Products = () => {
       return;
     }
 
-    // Dùng alert nhẹ để giữ nguyên luồng hiện tại, tránh phụ thuộc DOM trực tiếp.
-    alert(`Đã thêm ${product.name} vào giỏ hàng!`);
+    setToast(`✅ Đã thêm "${product.name}" vào giỏ hàng!`);
+  };
+
+  const goToPage = (p) => {
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
     <div className="container my-5 fade-in-up">
+      {toast && (
+        <div className="alert alert-success position-fixed top-0 start-50 translate-middle-x mt-3 shadow-sm" style={{ zIndex: 1050, borderRadius: 12 }}>
+          {toast}
+        </div>
+      )}
+
       {/* Header */}
       <div className="d-flex flex-column flex-md-row align-items-md-end justify-content-between mb-4">
         <div>
@@ -134,32 +146,21 @@ const Products = () => {
                 )}
               </div>
             </div>
-            <div className="col-lg-4">
-              <div className="d-flex gap-2 flex-wrap">
-                {categories.slice(0, 5).map((category) => (
+            <div className="col-lg-7">
+              <div className="d-flex gap-2 flex-nowrap overflow-auto pb-1" style={{ scrollbarWidth: 'thin' }}>
+                {categories.map((category) => (
                   <button
                     key={category}
                     onClick={() => setCat(category)}
-                    className={`btn btn-sm ${cat === category ? 'btn-warning text-white' : 'btn-outline-secondary'} rounded-pill px-3`}
+                    className={`btn btn-sm flex-shrink-0 rounded-pill px-3 ${cat === category ? 'btn-warning text-white' : 'btn-outline-secondary'}`}
                     style={{ transition: 'var(--transition)' }}
                   >
                     {category}
                   </button>
                 ))}
-                {categories.length > 5 && (
-                  <select
-                    className="form-select form-select-sm w-auto rounded-pill"
-                    value={categories.includes(cat) && categories.indexOf(cat) >=5? cat : ''}
-                    onChange={(e)=>setCat(e.target.value)}
-                    style={{minWidth:'120px'}}
-                  >
-                    <option value="" disabled>Khác...</option>
-                    {categories.slice(5).map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                )}
               </div>
             </div>
-            <div className="col-lg-3">
+            <div className="col-lg-5">
               <select className="form-select rounded-pill" value={sort} onChange={(e) => setSort(e.target.value)}>
                 {SORT_OPTIONS.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -184,13 +185,18 @@ const Products = () => {
               >
                 <div className="position-relative overflow-hidden">
                   <img
-                    src={product.imageUrl || product.image || '/ASSETS/Images/placeholder.jpg'}
+                    src={product.imageUrl || product.image || '/assets/images/placeholder.jpg'}
                     className="card-img-top"
                     alt={product.name}
                     loading="lazy"
                     style={{height: 220, objectFit: 'cover'}}
-                    onError={(e)=>{e.currentTarget.src='/ASSETS/Images/placeholder.jpg'}}
+                    onError={(e)=>{e.currentTarget.src='/assets/images/placeholder.jpg'}}
                   />
+                  {product.stock === 0 && (
+                    <span className="position-absolute top-0 end-0 m-2 badge bg-danger fw-bold shadow-sm">
+                      Hết hàng
+                    </span>
+                  )}
                   {product.tag && (
                     <span className="position-absolute top-0 start-0 m-2 badge bg-warning text-dark fw-bold shadow-sm">
                       {product.tag}
@@ -202,9 +208,17 @@ const Products = () => {
                   <h6 className="card-title fw-bold mb-2 text-truncate" title={product.name} style={{fontSize:'1.05rem'}}>
                     {product.name}
                   </h6>
-                  <p className="text-muted small mb-3" style={{height: 40, overflow: 'hidden', lineHeight:'1.4'}}>
-                    {product.description}
-                  </p>
+                  {product.rating !== undefined && product.rating !== null && (
+                    <div className="d-flex align-items-center gap-1 mb-2">
+                      <i className="bi bi-star-fill text-warning" style={{ fontSize: '12px' }} />
+                      <span className="small fw-semibold">{Number(product.rating).toFixed(1)}</span>
+                    </div>
+                  )}
+                  {product.description && (
+                    <p className="text-muted small mb-3" style={{height: 40, overflow: 'hidden', lineHeight:'1.4'}}>
+                      {product.description}
+                    </p>
+                  )}
 
                   <div className="d-flex justify-content-between align-items-center mb-3">
                     <span className="h5 fw-bold mb-0" style={{color:'var(--primary-orange)'}}>
@@ -222,8 +236,9 @@ const Products = () => {
                     <button
                       className="btn btn-warning text-white btn-sm fw-bold rounded-pill shadow-orange"
                       onClick={() => handleAdd(product)}
+                      disabled={product.stock === 0}
                     >
-                      <i className="bi bi-cart-plus me-1" /> Thêm vào giỏ
+                      <i className="bi bi-cart-plus me-1" /> {product.stock === 0 ? 'Hết hàng' : 'Thêm vào giỏ'}
                     </button>
                   </div>
                 </div>
@@ -249,7 +264,7 @@ const Products = () => {
         <nav className="d-flex justify-content-center mt-5">
           <ul className="pagination shadow-sm" style={{borderRadius:'12px', overflow:'hidden'}}>
             <li className={`page-item ${page===1? 'disabled' : ''}`}>
-              <button className="page-link" onClick={()=>setPage(p=>Math.max(1,p-1))}>
+              <button className="page-link" onClick={()=>goToPage(Math.max(1, page-1))}>
                 <i className="bi bi-chevron-left"></i>
               </button>
             </li>
@@ -263,7 +278,7 @@ const Products = () => {
                     <button
                       className="page-link fw-bold"
                       style={p===page? {background:'var(--primary-orange)', borderColor:'var(--primary-orange)'} : {}}
-                      onClick={()=>setPage(p)}
+                      onClick={()=>goToPage(p)}
                     >
                       {p}
                     </button>
@@ -273,7 +288,7 @@ const Products = () => {
             }
 
             <li className={`page-item ${page===totalPages? 'disabled' : ''}`}>
-              <button className="page-link" onClick={()=>setPage(p=>Math.min(totalPages,p+1))}>
+              <button className="page-link" onClick={()=>goToPage(Math.min(totalPages, page+1))}>
                 <i className="bi bi-chevron-right"></i>
               </button>
             </li>

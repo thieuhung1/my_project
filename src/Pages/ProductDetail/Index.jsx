@@ -7,9 +7,31 @@ import { getReviewsByProduct, addReply, addReview, hasUserReviewed } from '../..
 
 const fmt = n => n?.toLocaleString('vi-VN') + 'đ';
 
+const SkeletonDetail = () => (
+  <div className="container my-5 pt-5">
+    <div className="row g-5">
+      <div className="col-lg-6">
+        <div className="shimmer rounded-4" style={{ height: 500 }} />
+      </div>
+      <div className="col-lg-6">
+        <div className="shimmer rounded-4 mb-3" style={{ height: 420 }} />
+      </div>
+    </div>
+  </div>
+);
+
+const NotFound = () => (
+  <div className="container my-5 text-center pt-5">
+    <h3>Không tìm thấy món</h3>
+    <Link to="/products" className="btn btn-warning mt-3 text-white rounded-pill">
+      Quay lại
+    </Link>
+  </div>
+);
+
 export default function ProductDetail() {
   const { id } = useParams();
-  const { products } = useProducts();
+  const { products, loading } = useProducts();
   const { addToCart } = useCart();
   const { user, userProfile, toggleFavorite } = useAuth();
   const navigate = useNavigate();
@@ -43,9 +65,11 @@ export default function ProductDetail() {
 
   useEffect(() => { if (toast) { const t = setTimeout(()=>setToast(''), 3000); return ()=>clearTimeout(t); } }, [toast]);
 
-  if (!product) return <div className="container my-5 text-center pt-5"><h3>Không tìm thấy món</h3><Link to="/products" className="btn btn-warning mt-3 text-white rounded-pill">Quay lại</Link></div>;
+  if (loading) return <SkeletonDetail />;
+  if (!product) return <NotFound />;
 
   const isFav = userProfile?.favorites?.includes(product.id);
+  const outOfStock = product.stock !== undefined && product.stock <= 0;
   const avg = reviews.length? (reviews.reduce((s,r)=>s+r.rating,0)/reviews.length).toFixed(1) : product.rating?.toFixed(1) || '5.0';
   const total = reviews.length;
   const current = reviews.slice((page-1)*perPage, page*perPage);
@@ -78,6 +102,7 @@ export default function ProductDetail() {
         <ol className="breadcrumb" style={{background:'var(--light-orange)'}}>
           <li className="breadcrumb-item"><Link to="/">Trang chủ</Link></li>
           <li className="breadcrumb-item"><Link to="/products">Món ngon</Link></li>
+          {product.category && <li className="breadcrumb-item"><Link to={`/products?cat=${product.category}`}>{product.category}</Link></li>}
           <li className="breadcrumb-item active">{product.name}</li>
         </ol>
       </nav>
@@ -85,7 +110,7 @@ export default function ProductDetail() {
       <div className="row g-5">
         <div className="col-lg-6">
           <div className="position-relative overflow-hidden rounded-4 shadow-sm">
-            <img src={product.imageUrl||product.image} alt={product.name} className="w-100 blur-up" style={{height:500, objectFit:'cover', transition:'transform.4s'}} onLoad={e=>e.currentTarget.classList.add('loaded')} onMouseOver={e=>e.currentTarget.style.transform='scale(1.05)'} onMouseOut={e=>e.currentTarget.style.transform='scale(1)'} onError={e=>e.currentTarget.src='/ASSETS/Images/placeholder.jpg'}/>
+            <img src={product.imageUrl||product.image||'/assets/images/placeholder.jpg'} alt={product.name} className="w-100 blur-up" style={{height:500, objectFit:'cover', transition:'transform.4s'}} onLoad={e=>e.currentTarget.classList.add('loaded')} onMouseOver={e=>e.currentTarget.style.transform='scale(1.05)'} onMouseOut={e=>e.currentTarget.style.transform='scale(1)'} onError={e=>e.currentTarget.src='/assets/images/placeholder.jpg'}/>
             <button onClick={toggleFav} disabled={favLoading} className="btn rounded-circle position-absolute shadow-sm" style={{top:15,right:15,width:44,height:44,background:'white'}} title="Yêu thích">
               {favLoading? <span className="spinner-border spinner-border-sm"/> : <i className={`bi ${isFav?'bi-heart-fill':'bi-heart'}`} style={{color:'var(--primary-orange)', fontSize:20}}/>}
             </button>
@@ -95,15 +120,23 @@ export default function ProductDetail() {
         <div className="col-lg-6">
           <div className="p-4 border-0 rounded-4 shadow-sm bg-white" style={{borderRadius:'var(--border-radius)'}}>
             <h1 className="fw-bold mb-2 text-gradient-orange" style={{fontFamily:'Roboto Condensed, sans-serif'}}>{product.name}</h1>
-            <div className="d-flex gap-2 mb-3">
-              <span className="badge badge-gradient">Hot</span>
-              <span className="badge bg-success">Freeship Vinh</span>
+            <div className="d-flex gap-2 mb-3 flex-wrap">
+              {product.featured && <span className="badge badge-gradient">Hot</span>}
+              {product.tag && <span className="badge bg-success">{product.tag}</span>}
+              {product.category && <span className="badge bg-light text-dark border">{product.category}</span>}
+              {product.stock === 0 && <span className="badge bg-danger">Hết hàng</span>}
             </div>
             <div className="display-6 fw-bold mb-1" style={{color:'var(--primary-orange)'}}>{fmt(product.price)}</div>
             <div className="d-flex align-items-center gap-2 mb-4">
               <div className="text-warning">{[...Array(5)].map((_,i)=><i key={i} className={`bi bi-star${i<Math.round(avg)?'-fill':''}`}/>)}</div>
               <span className="fw-semibold">{avg}</span><span className="text-muted">({total} đánh giá)</span>
             </div>
+
+            {product.description && (
+              <p className="text-muted mb-4" style={{lineHeight: '1.7', fontSize: '0.95rem'}}>
+                {product.description}
+              </p>
+            )}
 
             <div className="mb-4" style={{maxWidth:200}}>
               <label className="fw-semibold">Số lượng</label>
@@ -115,8 +148,8 @@ export default function ProductDetail() {
             </div>
 
             <div className="d-grid gap-2 d-md-flex mb-4">
-              <button className="btn btn-success btn-lg px-4 rounded-pill btn-ripple" onClick={handleCart}><i className="bi bi-cart-plus me-2"/>Thêm giỏ</button>
-              <button className="btn btn-warning text-white btn-lg px-4 rounded-pill shadow-orange btn-ripple" onClick={buyNow}><i className="bi bi-lightning-charge me-2"/>Mua ngay</button>
+              <button className="btn btn-success btn-lg px-4 rounded-pill btn-ripple" onClick={handleCart} disabled={outOfStock}><i className="bi bi-cart-plus me-2"/>{outOfStock ? 'Hết hàng' : 'Thêm giỏ'}</button>
+              <button className="btn btn-warning text-white btn-lg px-4 rounded-pill shadow-orange btn-ripple" onClick={buyNow} disabled={outOfStock}><i className="bi bi-lightning-charge me-2"/>{outOfStock ? 'Không thể mua' : 'Mua ngay'}</button>
             </div>
 
             <ul className="list-unstyled small">

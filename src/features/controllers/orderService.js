@@ -10,15 +10,16 @@ import {
   serverTimestamp,
   runTransaction,
   increment,
-} from "firebase/firestore";
-import { db } from "../../firebase/firebase.Config";
-import { getDocDataOrThrow, mapDocs } from "./firestoreHelpers";
+} from 'firebase/firestore';
+import { db } from '../../firebase/firebase.Config';
+import { getDocDataOrThrow, mapDocs } from './firestoreHelpers';
 import {
   ORDER_STATUS,
   PAYMENT_METHOD,
   PAYMENT_PROVIDER,
   PAYMENT_STATUS,
-} from "../models/Order.model";
+} from '../models/Order.model';
+import { createNotification, NOTIFICATION_TYPES } from './notificationService';
 
 export const COLLECTION_NAME = "orders";
 export const PRODUCTS_COLLECTION = "products";
@@ -76,7 +77,7 @@ export const createOrder = async (orderData) => {
     }
 
     const orderRef = doc(collection(db, COLLECTION_NAME));
-    const initialStatus = orderData.type === "DINE_IN" ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
+    const initialStatus = orderData.type === 'DINE_IN' ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
 
     const paymentMethod = normalizePaymentMethod(orderData.paymentMethod);
     const paymentProvider = normalizePaymentProvider(orderData.paymentProvider);
@@ -85,27 +86,43 @@ export const createOrder = async (orderData) => {
         ? PAYMENT_STATUS.PENDING
         : normalizePaymentStatus(orderData.paymentStatus);
 
-    const initialPaymentStatus =
-      orderData.paymentMethod === PAYMENT_METHOD.VNPAY ? PAYMENT_STATUS.PENDING : normalizePaymentStatus(orderData.paymentStatus);
-
-
-    transaction.set(orderRef, {
+    const sanitizedOrderData = {
       ...orderData,
+      userId: String(orderData.userId || '').trim(),
+      userName: String(orderData.userName || '').trim().slice(0, 60),
+      phone: String(orderData.phone || '').trim().slice(0, 20),
+      address: String(orderData.address || '').trim().slice(0, 250),
+      note: String(orderData.note || '').trim().slice(0, 500),
+      type: String(orderData.type || '').trim(),
       items,
       status: normalizeOrderStatus(initialStatus),
-
       paymentMethod,
       paymentStatus,
       paymentProvider,
+    };
 
-      paymentMethod: normalizePaymentMethod(orderData.paymentMethod),
-      paymentStatus: initialPaymentStatus,
-      paymentProvider: normalizePaymentProvider(orderData.paymentProvider),
+    transaction.set(orderRef, {
+      ...sanitizedOrderData,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
-    return orderRef.id;
+    const orderId = orderRef.id;
+    const orderTotal = Number(sanitizedOrderData.totalAmount || sanitizedOrderData.total || 0);
+
+    createNotification({
+      type: NOTIFICATION_TYPES.ORDER_CREATED,
+      title: 'Đơn hàng mới đã được tạo',
+      message: `Đơn ${String(orderId).slice(-8).toUpperCase()} với tổng ${orderTotal.toLocaleString('vi-VN')}₫ đã được tạo.`,
+      audience: 'admin',
+      targetId: orderId,
+      userId: sanitizedOrderData.userId,
+      actorId: sanitizedOrderData.userId,
+      actorName: sanitizedOrderData.userName,
+      meta: { orderId, total: orderTotal },
+    }).catch((error) => console.error('Failed to create order notification', error));
+
+    return orderId;
   });
 };
 

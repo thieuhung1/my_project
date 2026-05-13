@@ -1,0 +1,66 @@
+---
+description: Core project rules for coding, Firebase, API, debugging, security, and workflow
+alwaysApply: true
+---
+
+# Project Rules
+
+## Core Principles
+- Analyze existing code structure before creating new files.
+- Reuse existing components and utilities whenever possible.
+- Never create duplicate logic.
+- Keep architecture consistent with the current project style.
+- Do not rename files unless necessary.
+- Avoid overengineering.
+
+## Code Style
+- Use clean, short, performant code.
+- Prefer `async`/`await` over promise chains.
+- Use functional components.
+- Keep functions under 40 lines if possible.
+- Remove dead code and unused imports.
+
+## React Rules
+- Use hooks properly.
+- Avoid unnecessary re-renders.
+- Split UI into reusable components.
+- Keep state minimal.
+- Use lazy loading when appropriate.
+
+## Firebase Rules
+- Never expose secret keys.
+- Validate Firestore paths carefully.
+- Use batched writes when possible.
+- Optimize reads to reduce cost.
+- Cache data locally if appropriate.
+
+## API Rules
+- Centralize API logic.
+- Handle loading and error states.
+- Never hardcode URLs in components.
+
+## Git Rules
+- Never modify unrelated files.
+- Make atomic changes.
+- Explain risky changes before applying them.
+
+## Debugging Rules
+- Investigate root cause first.
+- Do not patch blindly.
+- Prefer fixing architecture issues over temporary hacks.
+
+## Performance Rules
+- Optimize before adding libraries.
+- Avoid unnecessary dependencies.
+- Prefer native browser APIs.
+
+## Security Rules
+- Never store sensitive tokens in frontend.
+- Sanitize user input.
+- Validate uploads and file types.
+
+## Workflow
+- First understand.
+- Then plan.
+- Then implement.
+- Then verify.

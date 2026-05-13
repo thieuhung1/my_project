@@ -1,111 +1,105 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import '../../../styles/Chatbot.css';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { collection, addDoc, query, orderBy, getDocs, serverTimestamp } from "firebase/firestore";
+import { subscribeToMessages, routeConversationMessage, ensureConversationThread } from '../../../features/controllers/supportChatService';
+import { useAuth } from '../../../contexts/AuthContext';
 
-// TODO: SỬA ĐƯỜNG DẪN NÀY CHỈ ĐẾN FILE firebaseConfig.js CỦA BẠN
-import { db } from '../../../firebase/firebase.Config'; 
-
-// Khởi tạo Gemini AI từ file .env
-const apiKey = process.env.REACT_APP_GEMINI_API_KEY; 
-// console.log("API Key của tôi là:", apiKey); // THÊM DÒNG NÀY ĐỂ KIỂM TRA
-const genAI = new GoogleGenerativeAI(apiKey);
-// Đặt nhân vật cho Bot phù hợp với Đồ án "Food Hub"
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.5-flash",
-  systemInstruction: "Bạn là nhân viên tư vấn của ứng dụng đặt đồ ăn Food Hub. Hãy trả lời ngắn gọn, thân thiện, xưng em và gọi khách hàng là anh/chị. Hãy gợi ý các món ăn ngon, combo tiết kiệm và giải đáp thắc mắc về giao hàng."
-});
+const quickReplies = [
+  { label: 'Đặt hàng', msg: 'Tôi muốn đặt món ăn' },
+  { label: 'Theo dõi đơn', msg: 'Kiểm tra đơn hàng của tôi' },
+  { label: 'Khuyến mãi', msg: 'Có ưu đãi gì hôm nay?' },
+  { label: 'Gặp Admin', msg: 'Nhờ Admin hỗ trợ' },
+];
 
 const Chatbot = () => {
-  const[isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
-  const[input, setInput] = useState('');
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  
-  const chatSession = useRef(null);
+  const [isTyping] = useState(false);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isHandedOff, setIsHandedOff] = useState(false);
+  const [intentLabel, setIntentLabel] = useState('ai');
   const messagesEndRef = useRef(null);
+  const { user } = useAuth();
 
-  // 1. KHI VỪA MỞ WEB: TẢI LỊCH SỬ TỪ FIREBASE
+  const chatId = (() => {
+    if (typeof window === 'undefined') return 'anon-anon';
+    const stored = localStorage.getItem('anon_chat_id') || Math.random().toString(36).substring(2, 9);
+    if (!localStorage.getItem('anon_chat_id')) localStorage.setItem('anon_chat_id', stored);
+    return user ? user.uid : `anon-${stored}`;
+  })();
+
   useEffect(() => {
-    const initChatAndLoadHistory = async () => {
-      try {
-        const q = query(collection(db, "chats"), orderBy("timestamp", "asc"));
-        const snapshot = await getDocs(q);
-        
-        const historyData = [];
-        const geminiHistory =[];
+    if (!isOpen) return undefined;
 
-        snapshot.forEach((doc) => {
-          const data = doc.data();
-          historyData.push(data);
-          geminiHistory.push({
-            role: data.isBot ? "model" : "user",
-            parts: [{ text: data.text }]
-          });
-        });
+    let unsubscribe = () => {};
+    let cancelled = false;
 
-        // Nếu chưa có tin nhắn, tự động chào
-        if (historyData.length === 0) {
-          historyData.push({ text: 'Dạ em chào anh/chị! Em có thể giúp gì cho mình ạ? Hôm nay anh/chị muốn ăn món gì?', isBot: true });
-        }
+    const init = async () => {
+      await ensureConversationThread({
+        chatId,
+        userId: user?.uid || chatId,
+        userName: user?.displayName || user?.email?.split('@')[0] || 'Khách',
+      });
 
-        setMessages(historyData);
-
-        // Nạp lịch sử vào bộ não AI
-        chatSession.current = model.startChat({ history: geminiHistory });
-
-      } catch (error) {
-        console.error("Lỗi tải dữ liệu Firebase:", error);
-      }
+      if (cancelled) return;
+      setIsInitialized(true);
+      unsubscribe = subscribeToMessages(chatId, (data) => {
+        const sorted = (data || []).slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+        setMessages(sorted);
+        setIsHandedOff(sorted.some((msg) => msg.senderType === 'admin' || msg.routedToAdmin));
+      });
     };
 
-    initChatAndLoadHistory();
-  },[]);
+    init().catch((error) => {
+      console.error('Không thể khởi tạo cuộc trò chuyện:', error);
+      setMessages([
+        {
+          id: 'system-error',
+          text: 'Không thể khởi tạo cuộc trò chuyện lúc này. Vui lòng thử lại sau.',
+          senderType: 'system',
+          direction: 'system',
+        },
+      ]);
+    });
 
-  // 2. CUỘN XUỐNG CUỐI KHI CÓ TIN NHẮN MỚI
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [chatId, isOpen, user]);
+
   useEffect(() => {
-    if (messagesEndRef.current) {
+    if (messagesEndRef.current && isOpen) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isOpen]);
 
-  // 3. XỬ LÝ GỬI TIN NHẮN
-  const handleSend = async () => {
-    if (!input.trim() || isLoading || !chatSession.current) return;
+  const handleSend = async (textOverride) => {
+    const userMsg = (textOverride ?? input).trim();
+    if (!userMsg || isLoading) return;
 
-    const userMsg = input.trim();
-    // Hiện tin nhắn của user lên giao diện
-    setMessages((prev) =>[...prev, { text: userMsg, isBot: false }]);
     setInput('');
     setIsLoading(true);
 
     try {
-      // Lưu tin nhắn User lên Firebase
-      await addDoc(collection(db, "chats"), {
+      await routeConversationMessage({
+        chatId,
         text: userMsg,
-        isBot: false,
-        timestamp: serverTimestamp(),
+        userId: user?.uid || chatId,
+        userName: user?.displayName || user?.email?.split('@')[0] || 'Khách',
+        messages,
       });
-
-      // Gửi cho Gemini xử lý
-      const result = await chatSession.current.sendMessage(userMsg);
-      const botResponse = result.response.text();
-
-      // Hiện câu trả lời của Bot lên giao diện
-      setMessages((prev) => [...prev, { text: botResponse, isBot: true }]);
-
-      // Lưu câu trả lời của Bot lên Firebase
-      await addDoc(collection(db, "chats"), {
-        text: botResponse,
-        isBot: true,
-        timestamp: serverTimestamp(),
-      });
-
     } catch (error) {
-      console.error('Lỗi Gemini AI:', error);
-      setMessages((prev) =>[
+      console.error('Lỗi xử lý hội thoại:', error);
+      setMessages((prev) => [
         ...prev,
-        { text: 'Xin lỗi anh/chị, hệ thống tư vấn đang bận. Vui lòng thử lại sau!', isBot: true },
+        {
+          id: `system-${Date.now()}`,
+          text: 'Xin lỗi anh/chị, hệ thống tư vấn đang bận. Vui lòng thử lại sau!',
+          senderType: 'system',
+          direction: 'system',
+        },
       ]);
     } finally {
       setIsLoading(false);
@@ -117,45 +111,89 @@ const Chatbot = () => {
       {isOpen && (
         <div className="chat-window">
           <div className="chat-header">
-            <div className="chat-header-title">
-              <span className="chatbot-badge">
+            <div className="chat-header-left">
+              <div className="chat-avatar">
                 <i className="bi bi-stars" />
-              </span>
+              </div>
               <div>
-                <h3>Tư vấn viên AI</h3>
-                <p>Hỗ trợ Food Hub 24/7</p>
+                <div className="title-row">
+                  <h3>Tư vấn FoodHub</h3>
+                  <span className="handoff-pill">{isHandedOff ? 'admin' : 'ai'}</span>
+                </div>
+                <p>{isHandedOff ? 'Đang có admin tham gia cùng cuộc trò chuyện' : 'AI hỗ trợ nhanh, tự chuyển admin khi cần'}</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} aria-label="Đóng chat bot">✕</button>
           </div>
 
           <div className="chat-body">
-            {messages.map((msg, index) => (
-              <div key={index} className={`message ${msg.isBot ? 'bot' : 'user'}`}>
-                {msg.text}
+            {!isInitialized || messages.length === 0 ? (
+              <div className="chat-empty-state">
+                <div className="chat-empty-icon">
+                  <i className="bi bi-chat-square-dots" />
+                </div>
+                <h4>Xin chào anh/chị</h4>
+                <p>Chọn nhanh một nhu cầu hoặc nhắn trực tiếp, em sẽ hỗ trợ bằng AI và chuyển admin khi cần.</p>
+                <div className="quick-replies">
+                  {quickReplies.map((reply) => (
+                    <button key={reply.label} onClick={() => handleSend(reply.msg)} disabled={isLoading}>
+                      {reply.label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            ))}
+            ) : (
+              messages.map((msg, index) => {
+                const isSystem = msg.senderType === 'system' || msg.direction === 'system';
+                const isAi = msg.senderType === 'ai' || msg.direction === 'bot';
+                const isAdmin = msg.senderType === 'admin' || msg.direction === 'admin';
+                const isUser = msg.senderType === 'user' || msg.direction === 'user' || (!isAi && !isAdmin && !isSystem);
+
+                if (isSystem) {
+                  return (
+                    <div key={msg.id || index} className="chat-system-note">
+                      {msg.text}
+                    </div>
+                  );
+                }
+
+                return (
+                  <div key={msg.id || index} className={`message ${isUser ? 'user' : 'bot'} ${isAdmin ? 'admin' : ''}`}>
+                    <div className="message-sender">
+                      {isUser ? 'Bạn' : isAdmin ? 'Admin' : 'AI tư vấn'}
+                    </div>
+                    <div className="message-text">{msg.text}</div>
+                  </div>
+                );
+              })
+            )}
+            {isTyping && <div className="typing-indicator">Đang nhập...</div>}
             {isLoading && <div className="message bot">⏳ Đang suy nghĩ...</div>}
             <div ref={messagesEndRef} />
           </div>
 
           <div className="chat-footer">
-            <input
-              type="text"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-              placeholder="Nhập tin nhắn..."
-              disabled={isLoading}
-            />
-            <button onClick={handleSend} disabled={isLoading}>
-              Gửi
-            </button>
+            <div className="chat-handoff-hint">
+              {isHandedOff ? 'Admin đang cùng tham gia cuộc trò chuyện này.' : 'Nhắn tin một lần, hệ thống tự quyết định AI hay admin.'}
+            </div>
+            <div className="chat-input-row">
+              <input
+                type="text"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                placeholder="Nhập tin nhắn..."
+                disabled={isLoading}
+              />
+              <button onClick={() => handleSend()} disabled={isLoading || !input.trim()}>
+                Gửi
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      <button className="chat-toggle-btn" onClick={() => setIsOpen(!isOpen)} aria-label="Mở chat bot">
+      <button className="chat-toggle-btn" onClick={() => setIsOpen((v) => !v)} aria-label="Mở chat bot">
         <span className="chat-toggle-glow" />
         <i className="bi bi-robot" />
       </button>

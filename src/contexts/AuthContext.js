@@ -16,13 +16,21 @@ import {
   updateUserProfile,
   toggleFavorite as toggleFavoriteService,
 } from '../features';
+import { clearAllSupportChatCache } from '../features/controllers/supportChatService';
 import { updateProfile } from 'firebase/auth';
+
+export const USER_ROLES = {
+  ADMIN: 'admin',
+  STAFF: 'staff',
+  WAITER: 'waiter',
+  CUSTOMER: 'customer',
+};
 
 const AuthContext = createContext();
 
 export const useAuth = () => useContext(AuthContext);
 
-const DEFAULT_ROLE = 'customer';
+const DEFAULT_ROLE = USER_ROLES.CUSTOMER;
 const MAX_DISPLAY_NAME_LENGTH = 30;
 const MAX_PHOTO_URL_LENGTH = 2048;
 
@@ -122,6 +130,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const signOut = async () => {
+    clearAllSupportChatCache();
     await logout();
   };
 
@@ -170,9 +179,10 @@ export const AuthProvider = ({ children }) => {
     userProfile,
     loading,
     isAuthenticated: !!user,
-    isAdmin: userProfile?.role === 'admin',
-    isShipper: userProfile?.role === 'staff',
-    isWaiter: userProfile?.role === 'waiter',
+    isAnonymous: !!user?.isAnonymous,
+    isAdmin: userProfile?.role === USER_ROLES.ADMIN,
+    isShipper: userProfile?.role === USER_ROLES.STAFF,
+    isWaiter: userProfile?.role === USER_ROLES.WAITER,
     signUp,
     signIn,
     signInWithGoogle,

@@ -1,0 +1,19 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "supportChats": {
+      "$chatId": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || data.child('participants').child(auth.uid).exists() || auth.token.admin === true)",
+        ".write": "auth != null && (newData.child('userId').val() === auth.uid || data.child('userId').val() === auth.uid || auth.token.admin === true)",
+        "messages": {
+          "$messageId": {
+            ".read": "auth != null && (root.child('supportChats').child($chatId).child('userId').val() === auth.uid || root.child('supportChats').child($chatId).child('participants').child(auth.uid).exists() || auth.token.admin === true)",
+            ".write": "auth != null && (newData.child('senderId').val() === auth.uid || auth.token.admin === true)",
+            ".validate": "newData.hasChildren(['text', 'senderId', 'senderName', 'senderType', 'timestamp'])"
+          }
+        }
+      }
+    }
+  }
+}

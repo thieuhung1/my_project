@@ -3,7 +3,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
-  const { userProfile, isAuthenticated, loading } = useAuth();
+  const { userProfile, isAuthenticated, isAnonymous, loading } = useAuth();
 
   if (loading) {
     return (
@@ -16,7 +16,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   }
 
   // Chưa đăng nhập thì đẩy về trang đăng nhập
-  if (!isAuthenticated) {
+  if (!isAuthenticated || isAnonymous) {
     return <Navigate to="/signin" replace />;
   }
 

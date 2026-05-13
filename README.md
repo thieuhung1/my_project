@@ -1,66 +1,95 @@
-# 🚀 FoodHub - Frontend Giao Đồ Ăn Việt Nam
+# My Project
 
-## 📋 **Tính Năng Hoàn Chỉnh**
-✅ **12 Pages**: Home, Products, ProductDetail, Cart, SignIn/SignUp, MyList, Orders, Search, MyAccount, Contact, About  
-✅ **State Management**: Context API (Auth/Cart/Product) + localStorage  
-✅ **UI/UX**: Bootstrap 5 responsive, theme cam-trắng (#FF6B35), animations, loading spinners  
-✅ **Performance**: Lazy loading, optimized grids, mock API delay  
-✅ **Food VN**: Phở, Bánh Mì, Bánh Xèo... với ảnh ASSETS/Images  
+Ứng dụng web FoodHub phục vụ đặt món, quản lý đơn hàng, tài khoản người dùng và khu vực quản trị.
 
-## 🛠 **Tech Stack**
+## Công nghệ sử dụng
+
+- React 19
+- React Router DOM
+- Firebase
+- Bootstrap 5
+- MUI
+- Framer Motion
+- Recharts
+- Express
+- MongoDB / Mongoose
+- Firebase Admin
+
+## Tính năng chính
+
+- Trang chủ, danh sách sản phẩm, chi tiết sản phẩm
+- Giỏ hàng và thanh toán
+- Đăng ký, đăng nhập, quên mật khẩu
+- Tài khoản người dùng và lịch sử đơn hàng
+- Khu vực quản trị, shipper, waiter
+- Chat hỗ trợ khách hàng
+- Gợi ý tìm kiếm sản phẩm
+
+## Cấu trúc thư mục chính
+
+- `src/app` - khởi tạo ứng dụng, router, providers
+- `src/components` - component dùng chung
+- `src/contexts` - state toàn cục và auth
+- `src/features` - service, controller, logic nghiệp vụ
+- `src/Pages` - các màn hình theo route
+- `src/styles` - CSS dùng chung
+
+## Scripts
+
+```bash
+npm run dev
 ```
-React 19 + Router v7
-Bootstrap 5 + Icons
-Context API + useReducer
-ESLint + Prettier
-CRA (react-scripts 5.0.1)
-```
+Chạy frontend và backend song song.
 
-## 🚀 **Chạy Project**
+```bash
+npm run start:frontend
+```
+Chạy React app.
+
+```bash
+npm run start:backend
+```
+Chạy backend Node.js.
+
+```bash
+npm run seed
+```
+Chạy seed dữ liệu mẫu.
+
+## Môi trường cần thiết
+
+Tạo file `.env` và cấu hình các biến môi trường cần thiết cho Firebase, backend và các dịch vụ liên quan.
+
+## Hướng dẫn chạy dự án
+
+1. Cài đặt dependencies
+
 ```bash
 npm install
-npm start
-```
-Mở http://localhost:3000
-
-## 📁 **Cấu Trúc Code**
-```
-src/
-├── App.js - Router + Layout
-├── contexts/
-│   ├── AuthContext.js - Đăng nhập localStorage
-│   ├── CartContext.js - Giỏ hàng reducer + count badge
-│   └── ProductContext.js - Mock API + loading VN foods
-├── Pages/ - 12 pages w/ useContext
-└── Conponents/Header.js - Nav responsive + search/cart
 ```
 
-## ✨ **Tối Ưu Nổi Bật**
-- **Products/MyList/Search**: Grid responsive `col-xl-3 lg-4 md-6`, filter/search/pagination, hover-lift
-- **ProductDetail**: Carousel, quantity input, badges Hot/free ship, breadcrumb
-- **Home**: Hero slider, featured carousel w/ IntersectionObserver fade-in
-- **Header**: Fixed nav, cart badge live, search `/search?q=query`
-- **Cart**: Table editable quantity, remove, total VNĐ
-- **Auth**: Protected Orders/MyAccount, mock login
-- **Performance**: Loading spinners, lazy imgs, memoized products
-- **Responsive**: Mobile-first Bootstrap, hamburger menu
-- **Animations**: CSS keyframes fadeInUp/slideIn, hover scale/shadow
+2. Khởi động dự án
 
-## 🎨 **Theme Cam-Trắng**
-```css
-:root {
-  --orange: #FF6B35;
-  --white: #FFFFFF;
-  --shadow: 0 4px 20px rgba(255,107,53,0.15);
-}
+```bash
+npm run dev
 ```
 
-## 📱 **Demo Flow**
-1. Home → Featured products → Add to Cart
-2. Products → Filter → Detail → Quantity → Cart
-3. SignUp/Login → MyAccount/Orders
-4. Search "phở" → Results grid
-5. Cart → Checkout → Orders history
+3. Mở ứng dụng frontend theo địa chỉ hiển thị trong terminal.
 
-**Ready production, dễ kết nối API backend! 🔥**
+## Ghi chú triển khai
 
+- Dự án đang được tối ưu theo hướng nhẹ hơn, bảo mật hơn và đồng bộ giao diện hơn.
+- Các route nhạy cảm được bảo vệ bằng `ProtectedRoute`.
+- Một số tính năng có thể phụ thuộc vào Firebase và backend Node.js.
+
+## Kế hoạch cải tiến tiếp theo
+
+- Chuẩn hóa hệ thống component dùng chung
+- Siết rule bảo mật Firebase/Firestore
+- Tối ưu lazy load và render
+- Đồng bộ UI across mọi trang
+- Dọn dependency không dùng
+
+## License
+
+Private project.

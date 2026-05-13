@@ -34,7 +34,6 @@ import Waiter from '../Pages/Waiter/Index';
 import Header from '../components/layout/Header/Index';
 import ProtectedRoute from '../components/common/ProtectedRoute';
 import Footer from '../components/layout/Footer/Index';
-import SupportChatIcon from '../components/features/SupportChatIcon/index';
 import ChatbotIcon from '../components/features/ChatbotIcon/index';
 
 const NotFound = () => {
@@ -135,7 +134,6 @@ function App() {
             <AppRoutes />
           </main>
           <Footer />
-          <SupportChatIcon />
           <ChatbotIcon />
           <BottomNav />
         </div>
