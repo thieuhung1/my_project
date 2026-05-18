@@ -3,12 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
 
-// Format tiền theo kiểu Việt Nam để hiển thị đồng nhất.
-const currency = (n) => (typeof n === 'number' ? n.toLocaleString('vi-VN') + '₫' : n);
+// Trang danh sách sản phẩm: cho phép tìm kiếm, lọc, sắp xếp và phân trang.
+// Người dùng có thể xem chi tiết món ăn hoặc thêm trực tiếp vào giỏ hàng.
 
+// Số sản phẩm hiển thị trên mỗi trang.
 const ITEMS_PER_PAGE = 20;
 
-// Dữ liệu sort để tránh hard-code rải rác trong JSX.
+// Danh sách tùy chọn sắp xếp để tránh hard-code rải rác trong JSX.
 const SORT_OPTIONS = [
   { value: 'moinhat', label: 'Mới nhất' },
   { value: 'gia-thap', label: 'Giá thấp đến cao' },
@@ -33,6 +34,7 @@ const SkeletonCard = () => (
   </div>
 );
 
+// Component chính của trang sản phẩm.
 const Products = () => {
   const { products, loading } = useProducts();
   const { addToCart } = useCart();
@@ -44,11 +46,13 @@ const Products = () => {
   const [page, setPage] = useState(1);
   const [toast, setToast] = useState('');
 
+  // Tạo danh sách danh mục động từ dữ liệu sản phẩm hiện có.
   const categories = useMemo(() => {
     const set = new Set(products.map((p) => p.category).filter(Boolean));
     return ['Tất cả', ...Array.from(set)];
   }, [products]);
 
+  // Lọc sản phẩm theo danh mục, từ khóa và tùy chọn sắp xếp.
   const filtered = useMemo(() => {
     const searchText = q.toLowerCase();
 
@@ -70,9 +74,10 @@ const Products = () => {
     return list;
   }, [products, q, cat, sort]);
 
-  // reset page khi filter thay đổi
+  // Khi bộ lọc thay đổi thì quay lại trang đầu để tránh trang rỗng.
   useEffect(() => { setPage(1); }, [q, cat, sort]);
 
+  // Toast tự ẩn sau vài giây để không che giao diện quá lâu.
   useEffect(() => {
     if (!toast) return undefined;
     const t = setTimeout(() => setToast(''), 3000);
@@ -85,6 +90,7 @@ const Products = () => {
     return filtered.slice(start, start + ITEMS_PER_PAGE);
   }, [filtered, page]);
 
+  // Thêm sản phẩm vào giỏ, nếu chưa đăng nhập thì điều hướng sang đăng nhập.
   const handleAdd = (product) => {
     const ok = addToCart(product);
     if (!ok) {
@@ -95,6 +101,7 @@ const Products = () => {
     setToast(`✅ Đã thêm "${product.name}" vào giỏ hàng!`);
   };
 
+  // Chuyển trang và đưa người dùng lên đầu danh sách để đọc dễ hơn.
   const goToPage = (p) => {
     setPage(p);
     window.scrollTo({ top: 0, behavior: 'smooth' });

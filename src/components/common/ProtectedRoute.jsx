@@ -1,3 +1,6 @@
+// ProtectedRoute.jsx - Chặn truy cập vào các route cần đăng nhập hoặc đúng vai trò.
+// File này kiểm tra trạng thái auth, role người dùng và điều hướng sang trang phù hợp.
+
 import React from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';

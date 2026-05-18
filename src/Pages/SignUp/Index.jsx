@@ -1,3 +1,6 @@
+// SignUp/Index.jsx - Màn hình tạo tài khoản mới.
+// File này xử lý form đăng ký, validate mật khẩu, đồng ý điều khoản và điều hướng sau khi tạo account.
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';

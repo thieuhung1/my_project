@@ -1,5 +1,6 @@
 // ============================================================
 // AppProviders.jsx - Gom các provider dùng chung của ứng dụng
+// File này bọc toàn bộ app bằng các context/provider cần thiết.
 // ============================================================
 
 import React from 'react';

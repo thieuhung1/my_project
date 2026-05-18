@@ -1,6 +1,6 @@
 // ============================================================
 // App.js - Điểm khởi động ứng dụng Food Hub
-// Chỉ ghép providers, router và layout chung
+// File này chỉ ghép providers, router, layout chung và các route chính.
 // ============================================================
 
 import { BrowserRouter, Link, Route, Routes, useLocation } from 'react-router-dom';

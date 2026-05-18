@@ -1,3 +1,6 @@
+// firestoreHelpers.js - Các helper dùng chung cho thao tác với Firestore.
+// File này chuẩn hóa cách map snapshot, kiểm tra document tồn tại và gắn timestamp.
+
 import { serverTimestamp } from "firebase/firestore";
 
 export const mapDocs = (snapshot) =>

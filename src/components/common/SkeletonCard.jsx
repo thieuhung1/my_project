@@ -1,4 +1,6 @@
-// dùng để hiển thị skeleton loading khi đang tải dữ liệu
+// SkeletonCard.jsx - Các khung skeleton hiển thị khi dữ liệu chưa tải xong.
+// File này có 2 mẫu: card sản phẩm và chi tiết sản phẩm.
+
 import React from 'react';
 import { motion } from 'framer-motion';
 

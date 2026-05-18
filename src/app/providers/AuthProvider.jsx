@@ -1,5 +1,6 @@
 // ============================================================
 // AuthProvider.jsx - Bridge provider cho xác thực người dùng
+// File này chuyển tiếp AuthContext thành provider dùng ở tầng app.
 // ============================================================
 
 import React from 'react';

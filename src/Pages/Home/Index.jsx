@@ -1,22 +1,22 @@
-// Home.jsx - Trang chủ của FoodHub
-//----------------------------------------------------
-// Import các thư viện cần thiết cho trang chủ
+// Trang chủ của FoodHub.
+// File này chịu trách nhiệm hiển thị hero banner, món nổi bật,
+// USP, đánh giá khách hàng và các hành động điều hướng chính.
 import React, { useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useProducts } from '../../contexts/ProductContext';
 import { useCart } from '../../contexts/CartContext';
 import phoBoImage from '../../ASSETS/Images/phở bò.jpeg';
 import banhXeoImage from '../../ASSETS/Images/bánh xèo.jpg';
-//----------------------------------------------------------
-// Hàm format tiền theo kiểu Việt Nam để hiển thị đồng nhất.
+
+// Format tiền theo kiểu Việt Nam để hiển thị đồng nhất trên toàn trang.
 const currency = (n) => typeof n === 'number' ? n.toLocaleString('vi-VN') + '₫' : n;
-//----------------------------------------------------------
-// Hàm xử lý lỗi ảnh khi ảnh chính bị lỗi tải.
+
+// Khi ảnh sản phẩm lỗi, thay bằng ảnh mặc định để tránh giao diện bị vỡ.
 const handleImageError = (e) => {
   e.currentTarget.src = phoBoImage;
 };
-//----------------------------------------------------------
-// Hàm hiển thị toast message khi thêm sản phẩm vào giỏ hàng.
+
+// Hiển thị toast đơn giản để báo đã thêm món vào giỏ hàng.
 const showToast = (msg) => {
   const el = document.createElement('div');
   el.innerHTML = `<div style="position:fixed;bottom:24px;right:24px;background:var(--success);color:white;padding:12px 18px;border-radius:12px;box-shadow:var(--shadow-md);z-index:9999;font-weight:500;animation:fadeInUp .3s ease">${msg}</div>`;
@@ -24,9 +24,7 @@ const showToast = (msg) => {
   setTimeout(() => document.body.lastChild?.remove(), 2000);
 };
 
-
-//----------------------------------------------------------
-// Hàm hiển thị skeleton card khi đang tải dữ liệu.
+// Skeleton card dùng để giữ bố cục khi danh sách món đang tải.
 const SkeletonCard = () => (
   <div className="col-lg-4 col-md-6 mb-4">
     <div className="card h-100 border-0 shadow-sm">
@@ -43,7 +41,6 @@ const SkeletonCard = () => (
   </div>
 );
 
-//----------------------------------------------------------
 // Dữ liệu USP (Unique Selling Proposition) để hiển thị trên trang chủ.
 const USP_ITEMS = [
   { icon: 'bi-lightning-charge', title: 'Giao nhanh 30’', sub: 'Nội thành Vinh' },
@@ -51,7 +48,6 @@ const USP_ITEMS = [
   { icon: 'bi-percent', title: 'Ưu đãi mỗi ngày', sub: 'Giảm tới 50%' },
 ];
 
-//----------------------------------------------------------
 // Dữ liệu đánh giá khách hàng để hiển thị trên trang chủ.
 const TESTIMONIALS = [
   { text: 'Giao hàng siêu nhanh, đồ ăn còn nóng hổi!', name: 'Nguyễn Văn A', role: 'Khách quen' },
@@ -59,8 +55,7 @@ const TESTIMONIALS = [
   { text: 'Đóng gói sạch sẽ, shipper thân thiện. 5 sao!', name: 'Lê Văn C', role: 'Member' },
 ];
 
-//----------------------------------------------------------
-// Hàm Home để hiển thị trang chủ.
+// Component Home hiển thị toàn bộ trang chủ FoodHub.
 const Home = () => {
   const { products, loading } = useProducts();
   const { addToCart } = useCart();

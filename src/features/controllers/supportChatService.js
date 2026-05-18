@@ -1,3 +1,7 @@
+// supportChatService.js - Tầng truy cập dữ liệu cho chatbot và hỗ trợ admin.
+// File này điều phối toàn bộ luồng chat: tạo thread, gửi tin nhắn, đọc realtime,
+// phân loại intent, gọi AI và fallback sang admin khi cần.
+
 import {
   ref,
   push,
@@ -20,10 +24,56 @@ const SUPPORT_CHATS_PATH = 'supportChats';
 const SUPPORT_MESSAGES_PATH = (chatId) => `${SUPPORT_CHATS_PATH}/${chatId}/messages`;
 const SUPPORT_CHAT_PATH = (chatId) => `${SUPPORT_CHATS_PATH}/${chatId}`;
 
+const SESSION_STORAGE_PREFIX = 'foodhub_support_chat_session';
+const hasBrowserStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
+const getSessionKey = (userId) => `${SESSION_STORAGE_PREFIX}:${String(userId || 'anon').trim()}`;
+
+// Xóa cache hội thoại trong sessionStorage.
+// Dùng khi load lại trang hoặc khởi tạo thread mới để đảm bảo mỗi phiên là độc lập.
+const clearSessionMessages = (userId) => {
+  if (!hasBrowserStorage()) return;
+  try {
+    window.sessionStorage.removeItem(getSessionKey(userId));
+  } catch {
+    // ignore storage errors
+  }
+};
+
+// Lưu lại bản sao messages vào sessionStorage.
+// Điều này cho phép khôi phục context AI trong cùng một phiên mà không dùng chung giữa các tài khoản.
+const saveSessionMessages = (userId, messages) => {
+  if (!hasBrowserStorage()) return;
+  try {
+    window.sessionStorage.setItem(getSessionKey(userId), JSON.stringify({
+      savedAt: Date.now(),
+      messages,
+    }));
+  } catch {
+    // ignore storage errors
+  }
+};
+
+// Đọc messages đã lưu trong sessionStorage.
+// Nếu không có dữ liệu hợp lệ thì trả về null để caller dùng mảng rỗng hoặc dữ liệu realtime.
+const readSessionMessages = (userId) => {
+  if (!hasBrowserStorage()) return null;
+  try {
+    const raw = window.sessionStorage.getItem(getSessionKey(userId));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed?.messages) ? parsed.messages : null;
+  } catch {
+    return null;
+  }
+};
+
+// Chuẩn hóa chatId trước khi build ref để tránh path lỗi hoặc ký tự nguy hiểm.
 const getSafeChatId = (chatId) => sanitizeChatId(chatId);
 const getSafeChatRef = (chatId) => ref(rtdb, SUPPORT_CHAT_PATH(getSafeChatId(chatId)));
 const getSafeMessagesRef = (chatId) => ref(rtdb, SUPPORT_MESSAGES_PATH(getSafeChatId(chatId)));
 
+// Chuyển snapshot RTDB thành mảng object dễ xử lý trong React.
+// Mỗi key con trong snapshot được gắn lại vào trường `id`.
 const snapshotToList = (snapshot) => {
   if (!snapshot.exists()) return [];
   const data = snapshot.val();
@@ -60,12 +110,13 @@ export const getChatMessages = async (chatId, limitCount = 100) => {
   return snapshotToList(snapshot);
 };
 
-export const subscribeToMessages = (chatId, callback) => {
+export const subscribeToMessages = (chatId, callback, userId) => {
   const messagesRef = getSafeMessagesRef(chatId);
   return onValue(messagesRef, (snapshot) => {
     const messages = snapshotToList(snapshot);
     callback(messages);
     persistSupportChatState(chatId, { messages });
+    if (userId) saveSessionMessages(userId, messages);
   });
 };
 
@@ -153,6 +204,7 @@ export const ensureConversationThread = async ({ chatId, userId, userName }) => 
     lastSenderType: 'system',
   };
 
+  clearSessionMessages(userId);
   persistSupportChatState(safeChatId, {
     lastMessage: initialThread.lastMessage,
     lastUserName: userName,
@@ -245,7 +297,10 @@ export const routeConversationMessage = async ({ chatId, text, userId, userName,
   }
 
   try {
-    const chat = aiModel.startChat({ history: buildConversationContext(messages) });
+    const contextMessages = Array.isArray(messages) && messages.length > 0
+      ? messages
+      : (readSessionMessages(userId) || []);
+    const chat = aiModel.startChat({ history: buildConversationContext(contextMessages) });
     const result = await chat.sendMessage(safeText);
     const botResponse = result.response.text()?.trim();
     if (!botResponse) throw new Error('Empty AI response');

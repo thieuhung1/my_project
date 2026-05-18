@@ -9,36 +9,44 @@ const formatTime = (timestamp) => {
 };
 
 const SupportChatList = ({ chats, selectedChat, onSelectChat }) => {
+  const handleSelect = (chat) => {
+    if (chat?.id) onSelectChat(chat);
+  };
+
   return (
     <div className="chat-list-container flex-grow-1 overflow-auto">
       {chats.length === 0 ? (
         <div className="p-4 text-center text-muted small">Không có yêu cầu hỗ trợ nào.</div>
       ) : (
-        chats.map((chat) => (
-          <div
-            key={chat.id}
-            className={`chat-item p-3 cursor-pointer border-bottom transition-all ${selectedChat?.id === chat.id ? 'bg-white border-start border-primary border-4 shadow-sm' : ''}`}
-            onClick={() => onSelectChat(chat)}
-            style={{ cursor: 'pointer' }}
-          >
-            <div className="d-flex justify-content-between align-items-start mb-1">
-              <span className={`fw-bold small ${selectedChat?.id === chat.id ? 'text-primary' : 'text-dark'}`}>
-                {chat.userName || 'Khách #' + chat.id.slice(-4)}
-              </span>
-              <small className="text-muted" style={{ fontSize: '10px' }}>{formatTime(chat.lastMessageTime)}</small>
-            </div>
-            <div className="d-flex justify-content-between align-items-center">
-              <p className="small text-muted mb-0 text-truncate" style={{ maxWidth: '160px' }}>
-                {chat.lastMessage || 'Chưa có tin nhắn'}
-              </p>
-              {chat.unreadCount > 0 && (
-                <span className="badge bg-danger rounded-circle p-1" style={{ width: '18px', height: '18px', fontSize: '10px' }}>
-                  {chat.unreadCount}
+        chats.map((chat) => {
+          const isActive = selectedChat?.id === chat.id;
+          return (
+            <button
+              key={chat.id}
+              type="button"
+              className={`chat-item w-100 text-start p-3 border-0 border-bottom transition-all ${isActive ? 'bg-white border-start border-primary border-4 shadow-sm' : 'bg-transparent'}`}
+              onClick={() => handleSelect(chat)}
+              style={{ cursor: 'pointer' }}
+            >
+              <div className="d-flex justify-content-between align-items-start mb-1">
+                <span className={`fw-bold small ${isActive ? 'text-primary' : 'text-dark'}`}>
+                  {chat.userName || 'Khách #' + chat.id.slice(-4)}
                 </span>
-              )}
-            </div>
-          </div>
-        ))
+                <small className="text-muted" style={{ fontSize: '10px' }}>{formatTime(chat.lastMessageTime)}</small>
+              </div>
+              <div className="d-flex justify-content-between align-items-center">
+                <p className="small text-muted mb-0 text-truncate" style={{ maxWidth: '160px' }}>
+                  {chat.lastMessage || 'Chưa có tin nhắn'}
+                </p>
+                {chat.unreadCount > 0 && (
+                  <span className="badge bg-danger rounded-circle p-1" style={{ width: '18px', height: '18px', fontSize: '10px' }}>
+                    {chat.unreadCount}
+                  </span>
+                )}
+              </div>
+            </button>
+          );
+        })
       )}
     </div>
   );

@@ -16,6 +16,8 @@ const SupportChatManager = () => {
   const [error, setError] = useState('');
   const { userProfile, loading: authLoading, isAuthenticated } = useAuth();
   const messagesEndRef = useRef(null);
+  const previousMessageCountRef = useRef(0);
+  const hasLoadedMessagesRef = useRef(false);
 
   const isAdmin = userProfile?.role === 'admin';
 
@@ -50,12 +52,21 @@ const SupportChatManager = () => {
   useEffect(() => {
     if (!selectedChat) return undefined;
 
+    previousMessageCountRef.current = 0;
+    hasLoadedMessagesRef.current = false;
     markChatAsRead(selectedChat.id);
 
     const unsubscribe = subscribeToMessages(selectedChat.id, (msgs) => {
       const sortedMsgs = (msgs || []).slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+      const previousCount = previousMessageCountRef.current;
       setMessages(sortedMsgs);
-      setTimeout(scrollToBottom, 100);
+
+      if (hasLoadedMessagesRef.current && sortedMsgs.length > previousCount) {
+        requestAnimationFrame(scrollToBottom);
+      }
+
+      previousMessageCountRef.current = sortedMsgs.length;
+      hasLoadedMessagesRef.current = true;
     });
 
     return () => unsubscribe();

@@ -1,3 +1,6 @@
+// Checkout/Index.jsx - Màn hình xử lý xác nhận và thanh toán đơn hàng.
+// File này đọc order theo URL, đồng bộ trạng thái thanh toán, hỗ trợ VNPay và hiển thị tóm tắt đơn.
+
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';

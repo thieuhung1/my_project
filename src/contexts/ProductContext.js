@@ -1,6 +1,6 @@
 // ============================================================
 // ProductContext.js - Context quản lý sản phẩm (Firebase Firestore)
-// Thay thế dữ liệu tĩnh bằng dữ liệu thật từ Firestore
+// File này tải, lọc, tìm kiếm và làm mới dữ liệu sản phẩm từ Firestore.
 // ============================================================
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';

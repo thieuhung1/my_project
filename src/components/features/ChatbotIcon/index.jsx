@@ -1,6 +1,9 @@
+// ChatbotIcon/index.jsx - Cửa sổ chatbot nổi dùng để tư vấn khách hàng.
+// File này quản lý mở/đóng chat, gửi tin nhắn và nhận phản hồi AI/admin.
+
 import React, { useEffect, useRef, useState } from 'react';
 import '../../../styles/Chatbot.css';
-import { subscribeToMessages, routeConversationMessage, ensureConversationThread } from '../../../features/controllers/supportChatService';
+import { subscribeToMessages, routeConversationMessage, ensureConversationThread, clearSupportChatCache } from '../../../features/controllers/supportChatService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const quickReplies = [
@@ -18,16 +21,11 @@ const Chatbot = () => {
   const [isTyping] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isHandedOff, setIsHandedOff] = useState(false);
-  const [intentLabel, setIntentLabel] = useState('ai');
+  const [intentLabel] = useState('ai');
   const messagesEndRef = useRef(null);
   const { user } = useAuth();
 
-  const chatId = (() => {
-    if (typeof window === 'undefined') return 'anon-anon';
-    const stored = localStorage.getItem('anon_chat_id') || Math.random().toString(36).substring(2, 9);
-    if (!localStorage.getItem('anon_chat_id')) localStorage.setItem('anon_chat_id', stored);
-    return user ? user.uid : `anon-${stored}`;
-  })();
+  const chatId = user ? user.uid : 'guest';
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -48,7 +46,7 @@ const Chatbot = () => {
         const sorted = (data || []).slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
         setMessages(sorted);
         setIsHandedOff(sorted.some((msg) => msg.senderType === 'admin' || msg.routedToAdmin));
-      });
+      }, user?.uid || chatId);
     };
 
     init().catch((error) => {
@@ -68,6 +66,17 @@ const Chatbot = () => {
       unsubscribe();
     };
   }, [chatId, isOpen, user]);
+
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    return () => {
+      setMessages([]);
+      setIsInitialized(false);
+      setIsHandedOff(false);
+      setInput('');
+      clearSupportChatCache(chatId);
+    };
+  }, [chatId, isOpen]);
 
   useEffect(() => {
     if (messagesEndRef.current && isOpen) {

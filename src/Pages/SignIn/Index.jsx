@@ -1,3 +1,6 @@
+// SignIn/Index.jsx - Màn hình đăng nhập của FoodHub.
+// File này xử lý nhập email/mật khẩu, đăng nhập Google và điều hướng sau khi đăng nhập thành công.
+
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';

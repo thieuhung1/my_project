@@ -1,5 +1,10 @@
 // ============================================================
 // authService.js - Dịch vụ xác thực người dùng (Firebase Auth)
+// File này gom toàn bộ thao tác đăng nhập, đăng ký, đăng xuất,
+// reset mật khẩu và lắng nghe trạng thái phiên của người dùng.
+//
+// Mỗi hàm ở đây bọc trực tiếp Firebase Auth để caller không phải xử lý
+// những chi tiết lặp lại như persistence, profile update hay popup login.
 // ============================================================
 
 import {

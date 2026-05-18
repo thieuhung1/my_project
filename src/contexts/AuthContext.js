@@ -1,6 +1,6 @@
 // ============================================================
 // AuthContext.js - Context xác thực người dùng (Firebase Auth)
-// Fixed: PhotoURL length + dynamic import
+// File này quản lý đăng nhập, đăng ký, đăng xuất, profile và role người dùng.
 // ============================================================
 
 import React, { createContext, useContext, useEffect, useState } from 'react';

@@ -1,6 +1,6 @@
 // ============================================================
 // RoleRoute - Component bảo vệ định tuyến theo vai trò
-// Chỉ cho phép truy cập nếu role người dùng nằm trong danh sách
+// File này chỉ cho phép vào trang nếu role người dùng nằm trong danh sách cho phép.
 // ============================================================
 
 import React from 'react';

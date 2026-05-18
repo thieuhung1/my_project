@@ -1,3 +1,5 @@
+// File này tạo router Express cho luồng thanh toán VNPay.
+// Nó tạo URL thanh toán, xác minh callback và cập nhật trạng thái đơn hàng.
 const express = require('express');
 const {
   createPaymentUrl,

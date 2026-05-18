@@ -1,3 +1,6 @@
+// HeaderBrand.jsx - Hiển thị logo và tên thương hiệu ở đầu thanh điều hướng.
+// File này chỉ xử lý phần branding và quay về trang chủ khi người dùng bấm vào logo.
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 

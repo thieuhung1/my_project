@@ -1,3 +1,8 @@
+// categoryService.js - Tầng làm việc với collection danh mục trên Firestore.
+// File này chịu trách nhiệm lấy danh sách danh mục, lấy chi tiết, thêm/sửa/xóa.
+//
+// Các hàm ở đây đều bọc Firestore API để phần UI không phải tự viết query lặp lại.
+
 import {
   collection,
   doc,

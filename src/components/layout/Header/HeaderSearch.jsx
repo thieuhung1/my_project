@@ -1,3 +1,6 @@
+// HeaderSearch.jsx - Ô tìm kiếm nhanh ở header và danh sách gợi ý sản phẩm.
+// File này xử lý nhập từ khóa, hiển thị kết quả gợi ý và điều hướng sang trang tìm kiếm.
+
 import React from 'react';
 
 const HeaderSearch = ({

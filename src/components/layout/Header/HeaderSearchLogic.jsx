@@ -1,3 +1,7 @@
+// HeaderSearchLogic.jsx - Logic chấm điểm kết quả tìm kiếm nhanh trên header.
+// File này chuẩn hóa text, so khớp từ khóa và trả về danh sách gợi ý phù hợp nhất.
+// Nó giúp search ở header có mức ưu tiên tốt hơn thay vì chỉ so khớp đơn giản.
+
 import { useMemo } from 'react';
 
 const normalizeText = (value = '') =>

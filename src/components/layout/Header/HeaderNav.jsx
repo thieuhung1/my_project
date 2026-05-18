@@ -1,3 +1,6 @@
+// HeaderNav.jsx - Render các mục điều hướng chính trên header.
+// File này nhận danh sách route và tô sáng tab đang active.
+
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 

@@ -1,5 +1,9 @@
 // ============================================================
 // reviewService.js - Dịch vụ quản lý đánh giá sản phẩm (Firestore)
+// File này lo việc lấy, thêm, xóa review và cập nhật rating trung bình của sản phẩm.
+//
+// Các thao tác cập nhật rating được bọc trong try/catch để review vẫn lưu thành công
+// ngay cả khi việc đồng bộ rating của sản phẩm tạm thời thất bại.
 // ============================================================
 
 import {

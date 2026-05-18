@@ -1,3 +1,6 @@
+// notificationService.js - Dịch vụ tạo, đọc và đánh dấu thông báo trong Firestore.
+// File này phục vụ cả user lẫn admin, nên có phân loại audience và loại notification rõ ràng.
+
 import {
   addDoc,
   collection,

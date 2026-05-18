@@ -6,6 +6,7 @@ const AI_ROUTING_KEYWORDS = [
   'admin', 'nhân viên', 'hỗ trợ', 'khiếu nại', 'hoàn tiền', 'đổi món', 'đổi trả',
   'lỗi', 'sai đơn', 'không nhận được', 'giao chậm', 'thanh toán', 'hoá đơn', 'hóa đơn',
   'đơn hàng', 'trả hàng', 'gặp admin', 'liên hệ admin', 'người thật', 'tư vấn viên',
+  'chuyển người thật', 'gọi admin', 'hỗ trợ trực tiếp',
 ];
 
 export const INTENT_TYPES = {

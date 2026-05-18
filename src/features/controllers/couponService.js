@@ -1,5 +1,8 @@
 // ============================================================
 // couponService.js - Dịch vụ quản lý mã giảm giá (Firestore)
+// File này gom các thao tác CRUD mã giảm giá và kiểm tra coupon theo code.
+//
+// Mỗi hàm ở đây chỉ xử lý dữ liệu Firestore; UI chỉ cần gọi hàm và hiển thị kết quả.
 // ============================================================
 
 import {

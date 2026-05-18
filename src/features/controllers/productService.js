@@ -1,3 +1,8 @@
+// productService.js - Tầng truy cập dữ liệu cho sản phẩm.
+// File này chịu trách nhiệm đọc, lọc, thêm, sửa và xóa sản phẩm trong Firestore.
+//
+// Các hàm ở đây được thiết kế để UI chỉ cần gọi API cấp cao mà không phải tự viết query.
+
 import {
   collection,
   doc,
@@ -14,6 +19,7 @@ import {
 import { db } from "../../firebase/firebase.Config";
 import { buildTimestamps, mapDocs } from "./firestoreHelpers";
 
+// Tên collection dùng chung cho dữ liệu sản phẩm trong Firestore.
 const COLLECTION_NAME = "products";
 
 export const getAllProducts = async () => {

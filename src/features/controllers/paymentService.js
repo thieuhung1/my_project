@@ -1,3 +1,6 @@
+// paymentService.js - Tầng xử lý tích hợp thanh toán VNPay.
+// File này tạo payment URL, chuyển hướng người dùng và đồng bộ trạng thái thanh toán về Firestore.
+
 import { doc, serverTimestamp, updateDoc } from "firebase/firestore";
 import { db } from "../../firebase/firebase.Config";
 import { PAYMENT_PROVIDER, PAYMENT_STATUS } from "../models/Order.model";

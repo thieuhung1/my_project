@@ -1,3 +1,6 @@
+// HeaderUserMenu.jsx - Menu tài khoản của người dùng ở góc phải header.
+// File này hiển thị nút đăng nhập hoặc dropdown tài khoản tùy trạng thái auth.
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 

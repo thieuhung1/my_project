@@ -1,3 +1,6 @@
+// Footer/Index.jsx - Phần chân trang của FoodHub.
+// File này hiển thị thông tin thương hiệu, link điều hướng, hỗ trợ và liên hệ.
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';

@@ -1,5 +1,6 @@
 // ============================================================
 // CartContext.js - Context giỏ hàng (localStorage + Firestore orders)
+// File này quản lý giỏ hàng, mã giảm giá và quy trình thanh toán.
 // ============================================================
 
 import React, { createContext, useContext, useReducer, useEffect, useMemo, useCallback, useState } from 'react';
