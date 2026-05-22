@@ -52,6 +52,7 @@ export default function UserManager() {
   const roleMap = {
     admin: { text:'Quản Trị', bg:'#fef2f2', color:'#b91c1c', bd:'#fecaca' },
     staff: { text:'Shipper', bg:'#eff6ff', color:'#1d4ed8', bd:'#bfdbfe' },
+    waiter: { text:'Bồi bàn', bg:'#ecfeff', color:'#0e7490', bd:'#a5f3fc' },
     customer: { text:'Khách hàng', bg:'#f1f5f9', color:'#475569', bd:'#e2e8f0' }
   };
 
@@ -111,7 +112,8 @@ export default function UserManager() {
                         style={{padding:'9px 12px', borderRadius:12, border:'1px solid #e2e8f0', background:'#fff', minWidth:180, fontSize:13, boxShadow:'var(--shadow-soft)', outline:'none', cursor:'pointer'}}
                       >
                         <option value="customer">Khách Hàng</option>
-                        <option value="staff">Shipper (Staff)</option>
+                        <option value="staff">Shipper</option>
+                        <option value="waiter">Bồi bàn</option>
                         <option value="admin">Quản Trị (Admin)</option>
                       </select>
                     </td>

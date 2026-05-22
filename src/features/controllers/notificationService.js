@@ -26,6 +26,8 @@ export const NOTIFICATION_AUDIENCE = {
 export const NOTIFICATION_TYPES = {
   ORDER_CREATED: 'order_created',
   ORDER_UPDATED: 'order_updated',
+  ORDER_CANCELLED: 'order_cancelled',
+  ORDER_ASSIGNED: 'order_assigned',
   PRODUCT_CREATED: 'product_created',
   PRODUCT_UPDATED: 'product_updated',
   CHAT_REPLIED: 'chat_replied',
@@ -80,6 +82,18 @@ export const markNotificationsAsRead = async (notificationIds = []) => {
 const mapNotifications = (snapshot) => snapshot.docs.map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }));
 
 const filterByAudience = (items, audiences) => items.filter((item) => audiences.includes(item.audience));
+const uniqueNotifications = (items) => {
+  const seen = new Set();
+  return items.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+};
+
+const buildAccountLookupValues = ({ userId, email, phone, displayName }) => [userId, email, phone, displayName]
+  .map((value) => String(value || '').trim())
+  .filter(Boolean);
 
 export const getNotificationsByUser = async (userId, limitCount = 20) => {
   const safeUserId = String(userId || '').trim();
@@ -93,6 +107,33 @@ export const getNotificationsByUser = async (userId, limitCount = 20) => {
   );
   const snapshot = await getDocs(q);
   return filterByAudience(mapNotifications(snapshot), [NOTIFICATION_AUDIENCE.ALL, NOTIFICATION_AUDIENCE.USER]).slice(0, limitCount);
+};
+
+export const getNotificationsByAccount = async ({ userId, email, phone, displayName } = {}, limitCount = 20) => {
+  const lookupValues = buildAccountLookupValues({ userId, email, phone, displayName });
+  if (!lookupValues.length) return [];
+
+  const results = await Promise.all(
+    lookupValues.map(async (value) => {
+      const q = query(
+        collection(db, NOTIFICATIONS_COLLECTION),
+        where('userId', '==', value),
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
+      );
+
+      const snapshot = await getDocs(q);
+      return filterByAudience(mapNotifications(snapshot), [NOTIFICATION_AUDIENCE.ALL, NOTIFICATION_AUDIENCE.USER]);
+    })
+  );
+
+  return uniqueNotifications(results.flat())
+    .sort((a, b) => {
+      const aTime = a.createdAt?.toMillis?.() || 0;
+      const bTime = b.createdAt?.toMillis?.() || 0;
+      return bTime - aTime;
+    })
+    .slice(0, limitCount);
 };
 
 export const getAdminNotifications = async (limitCount = 30) => {

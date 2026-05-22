@@ -1,21 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { collection, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { db } from '../../firebase/firebase.Config';
 import {
-  getAllOrders,
   updateOrderStatus,
+  cancelOrder,
   assignOrderToShipper,
-  getUsersByRole
+  markTableVacated,
+  getUsersByRole,
+  ORDER_STATUS,
 } from '../../features/services';
 
 // KHÔNG import Admin.css nữa - vì bạn đã load global
 
 const STATUS = {
-  PENDING: { text: 'Chờ xử lý', bg: '#fff7ed', color: '#c2410c', bd: '#fed7aa' },
-  WAITING_FOR_SHIPPER: { text: 'Chờ shipper', bg: '#eff6ff', color: '#1d4ed8', bd: '#bfdbfe' },
-  CONFIRMED: { text: 'Đã xác nhận', bg: '#eef2ff', color: '#4338ca', bd: '#c7d2fe' },
-  DELIVERING: { text: 'Đang giao', bg: '#ecfeff', color: '#0891b2', bd: '#a5f3fc' },
-  COMPLETED: { text: 'Hoàn thành', bg: '#f0fdf4', color: '#15803d', bd: '#bbf7d0' },
-  CANCELLED: { text: 'Đã hủy', bg: '#fef2f2', color: '#b91c1c', bd: '#fecaca' },
-  FAILED: { text: 'Thất bại', bg: '#faf5ff', color: '#7e22ce', bd: '#e9d5ff' },
+  [ORDER_STATUS.PENDING]: { text: 'Chờ xử lý', bg: '#fff7ed', color: '#c2410c', bd: '#fed7aa' },
+  [ORDER_STATUS.WAITING_FOR_SHIPPER]: { text: 'Chờ shipper', bg: '#eff6ff', color: '#1d4ed8', bd: '#bfdbfe' },
+  [ORDER_STATUS.CONFIRMED]: { text: 'Đã xác nhận', bg: '#eef2ff', color: '#4338ca', bd: '#c7d2fe' },
+  [ORDER_STATUS.DELIVERING]: { text: 'Đang giao', bg: '#ecfeff', color: '#0891b2', bd: '#a5f3fc' },
+  [ORDER_STATUS.COMPLETED]: { text: 'Hoàn thành', bg: '#f0fdf4', color: '#15803d', bd: '#bbf7d0' },
+  [ORDER_STATUS.CANCELLED]: { text: 'Đã hủy', bg: '#fef2f2', color: '#b91c1c', bd: '#fecaca' },
+  [ORDER_STATUS.FAILED]: { text: 'Thất bại', bg: '#faf5ff', color: '#7e22ce', bd: '#e9d5ff' },
 };
 
 const TABS = [
@@ -26,6 +30,8 @@ const TABS = [
   { key: 'COMPLETED', label: 'Hoàn thành' },
 ];
 
+const TOTAL_TABLES = 20;
+
 const initials = (name='') => name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 
 export default function OrderManager() {
@@ -35,29 +41,90 @@ export default function OrderManager() {
   const [q, setQ] = useState('');
   const [tab, setTab] = useState('ALL');
 
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [o, s] = await Promise.all([getAllOrders(), getUsersByRole('staff')]);
-      setOrders(o); setShippers(s);
-    } catch (e) { console.error(e); alert('Lỗi tải đơn hàng'); }
-    finally { setLoading(false); }
-  };
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    let mounted = true;
+
+    const loadShippers = async () => {
+      setLoading(true);
+      try {
+        const s = await getUsersByRole('staff');
+        if (mounted) setShippers(s);
+      } catch (e) {
+        console.error(e);
+        if (mounted) alert('Lỗi tải dữ liệu shipper');
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    loadShippers();
+
+    const ordersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+    const unsubscribe = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        const liveOrders = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setOrders(liveOrders);
+      },
+      (error) => {
+        console.error('Realtime orders error:', error);
+      }
+    );
+
+    return () => {
+      mounted = false;
+      unsubscribe();
+    };
+  }, []);
 
   const stats = useMemo(() => ({
     total: orders.length,
-    pending: orders.filter(o=>o.status==='PENDING').length,
-    delivering: orders.filter(o=>['CONFIRMED','DELIVERING','WAITING_FOR_SHIPPER'].includes(o.status)).length,
-    revenue: orders.filter(o=>o.status==='COMPLETED').reduce((a,b)=>a+(b.totalAmount||0),0)
+    pending: orders.filter(o=>o.status===ORDER_STATUS.PENDING).length,
+    delivering: orders.filter(o=>[ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERING, ORDER_STATUS.WAITING_FOR_SHIPPER].includes(o.status)).length,
+    revenue: orders.filter(o=>o.status===ORDER_STATUS.COMPLETED).reduce((a,b)=>a+(b.totalAmount||0),0)
   }), [orders]);
+
+  const tableFlow = useMemo(() => {
+    const dineInActiveOrders = orders.filter((o) => {
+      if (o.type !== 'DINE_IN') return false;
+      if ([ORDER_STATUS.CANCELLED, ORDER_STATUS.FAILED].includes(o.status)) return false;
+
+      if (o.status === ORDER_STATUS.COMPLETED) {
+        return o.tableVacated !== true;
+      }
+
+      return true;
+    });
+
+    const occupiedTableSet = new Set(
+      dineInActiveOrders
+        .map((o) => String(o.table_id || '').trim())
+        .filter(Boolean)
+    );
+
+    const allTables = Array.from({ length: TOTAL_TABLES }, (_, i) => `Bàn ${i + 1}`);
+    const tableCards = allTables.map((tableName) => {
+      const activeOrder = dineInActiveOrders.find((o) => String(o.table_id || '').trim() === tableName);
+      return {
+        tableName,
+        isOccupied: occupiedTableSet.has(tableName),
+        activeOrder,
+      };
+    });
+
+    return {
+      occupiedCount: tableCards.filter((t) => t.isOccupied).length,
+      emptyCount: tableCards.filter((t) => !t.isOccupied).length,
+      tableCards,
+    };
+  }, [orders]);
 
   const filtered = useMemo(() => {
     let list = [...orders];
-    if(tab==='PENDING') list = list.filter(o=>o.status==='PENDING');
-    if(tab==='WAITING') list = list.filter(o=>o.status==='WAITING_FOR_SHIPPER');
-    if(tab==='DELIVERING') list = list.filter(o=>['CONFIRMED','DELIVERING'].includes(o.status));
-    if(tab==='COMPLETED') list = list.filter(o=>o.status==='COMPLETED');
+    if(tab==='PENDING') list = list.filter(o=>o.status===ORDER_STATUS.PENDING);
+    if(tab==='WAITING') list = list.filter(o=>o.status===ORDER_STATUS.WAITING_FOR_SHIPPER);
+    if(tab==='DELIVERING') list = list.filter(o=>[ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERING].includes(o.status));
+    if(tab==='COMPLETED') list = list.filter(o=>o.status===ORDER_STATUS.COMPLETED);
     if(q){
       const k=q.toLowerCase();
       list = list.filter(o=> o.id?.toLowerCase().includes(k) || (o.userName||o.customerName||'').toLowerCase().includes(k) || o.phone?.includes(k));
@@ -65,12 +132,34 @@ export default function OrderManager() {
     return list;
   }, [orders, tab, q]);
 
-  const updateStatus = async (id, st) => { await updateOrderStatus(id, st); fetchData(); };
+  const updateStatus = async (id, st) => { 
+    try {
+      if (st === ORDER_STATUS.CANCELLED) {
+        await cancelOrder(id, 'Admin hủy đơn', 'admin');
+      } else {
+        await updateOrderStatus(id, st, 'admin'); 
+      }
+    } catch (error) {
+      alert(error.message);
+    }
+  };
   const assignShip = async (id, sid) => {
     if(!sid) return;
     const ship = shippers.find(s=>s.id===sid);
-    await assignOrderToShipper(id, sid, ship?.displayName || 'Shipper');
-    fetchData();
+    await assignOrderToShipper(id, sid, ship?.displayName || 'Shipper', 'admin');
+  };
+
+  const markVacatedByAdmin = async (table) => {
+    if (!table?.isOccupied || !table?.activeOrder?.id) return;
+
+    const ok = window.confirm(`Xác nhận khách ở ${table.tableName} đã về và bàn chuyển sang trạng thái trống?`);
+    if (!ok) return;
+
+    try {
+      await markTableVacated(table.activeOrder.id, 'admin');
+    } catch (error) {
+      alert(error.message || 'Không thể cập nhật trạng thái bàn');
+    }
   };
 
   const today = new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
@@ -111,6 +200,47 @@ export default function OrderManager() {
         ))}
       </div>
 
+      <div className="panel" style={{padding:'16px 20px', marginBottom:18}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12,flexWrap:'wrap',gap:8}}>
+          <span style={{fontWeight:700,fontSize:18}}>Flow quản lý bàn (Admin)</span>
+          <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+            <span style={{background:'#ecfdf5',color:'#166534',border:'1px solid #bbf7d0',padding:'6px 10px',borderRadius:999,fontSize:12,fontWeight:700}}>
+              Trống: {tableFlow.emptyCount}
+            </span>
+            <span style={{background:'#fff1f2',color:'#9f1239',border:'1px solid #fecdd3',padding:'6px 10px',borderRadius:999,fontSize:12,fontWeight:700}}>
+              Đang có khách: {tableFlow.occupiedCount}
+            </span>
+          </div>
+        </div>
+
+        <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(110px,1fr))',gap:10}}>
+          {tableFlow.tableCards.map((table) => (
+            <button
+              key={table.tableName}
+              type="button"
+              onClick={() => markVacatedByAdmin(table)}
+              disabled={!table.isOccupied}
+              title={table.isOccupied ? 'Bấm để xác nhận khách đã về' : 'Bàn đang trống'}
+              style={{
+                borderRadius:12,
+                padding:'10px 8px',
+                border: table.isOccupied ? '1px solid #fecdd3' : '1px solid #bbf7d0',
+                background: table.isOccupied ? '#fff1f2' : '#f0fdf4',
+                color: table.isOccupied ? '#9f1239' : '#166534',
+                textAlign:'center',
+                fontWeight:700,
+                fontSize:13,
+                cursor: table.isOccupied ? 'pointer' : 'default',
+                opacity: table.isOccupied ? 1 : 0.9,
+              }}
+            >
+              <div>{table.tableName}</div>
+              <div style={{fontSize:11,marginTop:4,opacity:.9}}>{table.isOccupied ? 'Có khách • Bấm xác nhận về' : 'Đang trống'}</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="panel" style={{padding:0, overflow:'hidden'}}>
         <div className="panel-head" style={{padding:'16px 20px', borderBottom:'1px solid #f1f5f9'}}>
           <span style={{fontWeight:700,fontSize:18}}>Quản Lý Đơn Hàng</span>
@@ -123,7 +253,7 @@ export default function OrderManager() {
           <table style={{width:'100%',borderCollapse:'separate',borderSpacing:0}}>
             <thead>
               <tr style={{background:'linear-gradient(180deg,#fbfdff,#f7f9ff)'}}>
-                {['Mã Đơn','Khách Hàng','Tổng Tiền','Trạng Thái','Shipper','Hành Động'].map(h=>(
+                {['Mã Đơn','Khách Hàng','Tổng Tiền','Trạng Thái','Shipper','Lịch sử trạng thái','Hành Động'].map(h=>(
                   <th key={h} style={{textAlign:'left',padding:'14px 20px',fontSize:12,textTransform:'uppercase',letterSpacing:.5,color:'#64748b',fontWeight:700,borderBottom:'1px solid #eef2f7'}}>{h}</th>
                 ))}
               </tr>
@@ -151,7 +281,7 @@ export default function OrderManager() {
                       <span style={{background:st.bg,color:st.color,border:`1px solid ${st.bd}`,padding:'6px 12px',borderRadius:999,fontSize:12,fontWeight:700}}>{st.text}</span>
                     </td>
                     <td style={{padding:'18px 20px',borderTop:'1px solid #f1f5f9'}}>
-                      {['COMPLETED','CANCELLED','FAILED'].includes(order.status)? (
+                      {[ORDER_STATUS.COMPLETED, ORDER_STATUS.CANCELLED, ORDER_STATUS.FAILED].includes(order.status)? (
                         <span style={{color:'#64748b',fontSize:13}}>{order.shipperName||'Không có'}</span>
                       ) : (
                         <select value={order.shipperId||''} onChange={e=>assignShip(order.id,e.target.value)} style={{padding:'9px 12px',borderRadius:12,border:'1px solid #e2e8f0',background:'#fff',minWidth:170,fontSize:13,boxShadow:'var(--shadow-soft)',outline:'none',cursor:'pointer'}}>
@@ -160,13 +290,27 @@ export default function OrderManager() {
                         </select>
                       )}
                     </td>
+                    <td style={{padding:'18px 20px',borderTop:'1px solid #f1f5f9', minWidth: 260}}>
+                      <div style={{display:'flex',flexDirection:'column',gap:6,maxHeight:120,overflowY:'auto'}}>
+                        {(order.statusHistory || []).slice(-3).reverse().map((h, idx) => (
+                          <div key={`${order.id}-hist-${idx}`} style={{fontSize:12,background:'#f8fafc',border:'1px solid #e2e8f0',borderRadius:10,padding:'6px 8px'}}>
+                            <div style={{fontWeight:700,color:'#334155'}}>{h.from || 'START'} → {h.to}</div>
+                            <div style={{color:'#64748b'}}>by {h.actor || 'system'} • {h.note || 'Cập nhật trạng thái'}</div>
+                            <div style={{color:'#94a3b8'}}>{h.at ? new Date(h.at).toLocaleString('vi-VN') : '—'}</div>
+                          </div>
+                        ))}
+                        {(!order.statusHistory || order.statusHistory.length === 0) && (
+                          <div style={{fontSize:12,color:'#94a3b8'}}>Chưa có lịch sử trạng thái</div>
+                        )}
+                      </div>
+                    </td>
                     <td style={{padding:'18px 20px',borderTop:'1px solid #f1f5f9'}}>
                       <div style={{display:'flex',gap:8}}>
-                        {(order.status==='PENDING'||order.status==='WAITING_FOR_SHIPPER') && (
-                          <button onClick={()=>updateStatus(order.id,'CONFIRMED')} style={{padding:'8px 14px',borderRadius:10,background:'#fff',border:'1px solid #a7f3d0',color:'#065f46',fontWeight:600,fontSize:13,cursor:'pointer',transition:'.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#ecfdf5'} onMouseLeave={e=>e.currentTarget.style.background='#fff'}>Xác nhận</button>
+                        {[ORDER_STATUS.PENDING, ORDER_STATUS.WAITING_FOR_SHIPPER].includes(order.status) && (
+                          <button onClick={()=>updateStatus(order.id, ORDER_STATUS.CONFIRMED)} style={{padding:'8px 14px',borderRadius:10,background:'#fff',border:'1px solid #a7f3d0',color:'#065f46',fontWeight:600,fontSize:13,cursor:'pointer',transition:'.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#ecfdf5'} onMouseLeave={e=>e.currentTarget.style.background='#fff'}>Xác nhận</button>
                         )}
-                        {!['CANCELLED','COMPLETED','FAILED'].includes(order.status) && (
-                          <button onClick={()=>updateStatus(order.id,'CANCELLED')} style={{padding:'8px 14px',borderRadius:10,background:'#fff',border:'1px solid #fecdd3',color:'#be123c',fontWeight:600,fontSize:13,cursor:'pointer',transition:'.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#fff1f2'} onMouseLeave={e=>e.currentTarget.style.background='#fff'}>Huỷ</button>
+                        {![ORDER_STATUS.CANCELLED, ORDER_STATUS.COMPLETED, ORDER_STATUS.FAILED].includes(order.status) && (
+                          <button onClick={()=>updateStatus(order.id, ORDER_STATUS.CANCELLED)} style={{padding:'8px 14px',borderRadius:10,background:'#fff',border:'1px solid #fecdd3',color:'#be123c',fontWeight:600,fontSize:13,cursor:'pointer',transition:'.15s'}} onMouseEnter={e=>e.currentTarget.style.background='#fff1f2'} onMouseLeave={e=>e.currentTarget.style.background='#fff'}>Huỷ</button>
                         )}
                       </div>
                     </td>
@@ -174,7 +318,7 @@ export default function OrderManager() {
                 );
               })}
               {filtered.length===0 && (
-                <tr><td colSpan={6} style={{textAlign:'center',padding:'64px 20px',color:'#94a3b8'}}>
+                <tr><td colSpan={7} style={{textAlign:'center',padding:'64px 20px',color:'#94a3b8'}}>
                   <div style={{fontSize:42,marginBottom:12}}>🗂️</div>
                   Không có đơn hàng nào
                 </td></tr>

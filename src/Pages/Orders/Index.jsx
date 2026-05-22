@@ -102,7 +102,12 @@ const Orders = () => {
         return;
       }
 
-      navigate(`/checkout/${orderId}?status=success`, { replace: true });
+      if (resolvedPaymentMethod === 'COD') {
+        navigate('/my-orders', { replace: true });
+        return;
+      }
+
+      navigate(`/checkout/${orderId}?method=${resolvedPaymentMethod}`, { replace: true });
     } catch (err) {
       setError(err.message || 'Đặt hàng thất bại');
     } finally {
@@ -159,8 +164,47 @@ const Orders = () => {
                     </div>
                   </> : <>
                     <div className="col-12">
-                      <label className="form-label fw-semibold">Số bàn *</label>
-                      <input className="form-control form-control-lg" value={tableId} onChange={e=>setTableId(e.target.value)} placeholder="Ví dụ: Bàn 5" required style={{borderRadius:12}}/>
+                      <label className="form-label fw-semibold d-flex align-items-center gap-2">
+                        <span style={{fontSize:18}}>🪑</span>
+                        <span>Số bàn *</span>
+                      </label>
+                      <div className="p-3" style={{background:'#fff7ed', border:'1px solid #fed7aa', borderRadius:14}}>
+                        <div className="d-grid" style={{gridTemplateColumns:'repeat(auto-fill, minmax(92px, 1fr))', gap:10}}>
+                          {Array.from({ length: 20 }, (_, i) => i + 1).map((tableNumber) => {
+                            const value = `Bàn ${tableNumber}`;
+                            const active = tableId === value;
+                            return (
+                              <button
+                                key={tableNumber}
+                                type="button"
+                                onClick={() => setTableId(value)}
+                                className="btn"
+                                style={{
+                                  borderRadius:12,
+                                  border: active ? '1px solid #f97316' : '1px solid #fdba74',
+                                  background: active ? 'linear-gradient(135deg,#f97316,#fb923c)' : '#fff',
+                                  color: active ? '#fff' : '#9a3412',
+                                  fontWeight: 700,
+                                  padding: '10px 8px',
+                                  boxShadow: active ? '0 8px 20px rgba(249,115,22,.25)' : 'none',
+                                  transition: 'all .15s ease',
+                                }}
+                              >
+                                Bàn {tableNumber}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <input
+                          type="hidden"
+                          value={tableId}
+                          required
+                          onChange={() => {}}
+                        />
+                        <div className="form-text mt-2 mb-0" style={{color:'#9a3412'}}>
+                          {tableId ? `Bạn đã chọn: ${tableId}` : 'Vui lòng chọn bàn trước khi đặt món'}
+                        </div>
+                      </div>
                     </div>
                   </>}
                   <div className="col-12">

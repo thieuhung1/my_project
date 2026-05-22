@@ -26,12 +26,12 @@ const showToast = (msg) => {
 
 // Skeleton card dùng để giữ bố cục khi danh sách món đang tải.
 const SkeletonCard = () => (
-  <div className="col-lg-4 col-md-6 mb-4">
+  <div className="col-lg-3 col-md-6 mb-4">
     <div className="card h-100 border-0 shadow-sm">
       <div className="placeholder-glow" style={{height:220, background:'var(--gray-light)'}}>
         <span className="placeholder w-100 h-100 d-block" />
       </div>
-      <div className="card-body p-4">
+      <div className="card-body p-3">
         <span className="placeholder col-7 mb-2 rounded" />
         <span className="placeholder col-5 mb-3 rounded" />
         <span className="btn disabled placeholder col-12 mb-2 rounded-pill" />
@@ -129,10 +129,12 @@ const Home = () => {
           <p className="text-muted">Những món bán chạy nhất tuần</p>
         </div>
 
+{/* //<div key={product.id} className="col-xl-1 col-lg-4 col-md-4 mb-4" style={{animationDelay:`${idx*60}ms`}}></div> */}
         <div className="row products-grid">
           {loading ? Array.from({length:6}).map((_,i)=><SkeletonCard key={i}/>) :
             featured.length > 0 ? featured.map((product, idx) => (
-              <div key={product.id} className="col-lg-4 col-md-6 mb-4" style={{animationDelay:`${idx*60}ms`}}>
+              <div key={product.id} className=" col-lg-4 col-md-4 mb-4" style={{animationDelay:`${idx*60}ms`}}>
+                
                 <div className="card h-100 border-0 shadow-sm hover-lift overflow-hidden" style={{borderRadius:'var(--border-radius)'}}>
                   <div className="position-relative">
                     <img src={product.imageUrl || product.image || phoBoImage} className="card-img-top" alt={product.name} loading="lazy" style={{height:220, objectFit:'cover'}} onError={handleImageError}/>

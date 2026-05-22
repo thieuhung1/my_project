@@ -2,7 +2,7 @@
 // File này dùng cho trang hoặc dashboard cần xem nhiều thông báo cùng lúc.
 
 import React, { useEffect, useMemo, useState } from 'react';
-import { getAdminNotifications, getNotificationsByUser, NOTIFICATION_TYPES } from '../../features/controllers/notificationService';
+import { getAdminNotifications, getNotificationsByAccount, NOTIFICATION_TYPES } from '../../features/controllers/notificationService';
 import { useAuth } from '../../contexts/AuthContext';
 
 const TYPE_META = {
@@ -19,14 +19,27 @@ const NotificationsBoard = () => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const resolvedIdentity = useMemo(() => ({
+    userId: userProfile?.uid || user?.uid || '',
+    email: userProfile?.email || user?.email || '',
+    phone: userProfile?.phone || user?.phoneNumber || '',
+    displayName: userProfile?.displayName || user?.displayName || '',
+  }), [user?.email, user?.phoneNumber, user?.uid, user?.displayName, userProfile?.displayName, userProfile?.email, userProfile?.phone, userProfile?.uid]);
+
   const title = useMemo(() => (isAdmin ? 'Thông báo quản trị' : 'Thông báo của bạn'), [isAdmin]);
+  const subtitle = useMemo(() => {
+    if (isAdmin) return 'Bản tin hoạt động hệ thống';
+    const name = userProfile?.displayName || user?.displayName || 'bạn';
+    const role = userProfile?.role ? ` • ${userProfile.role}` : '';
+    return `Xin chào ${name}${role}`;
+  }, [isAdmin, user?.displayName, userProfile?.displayName, userProfile?.role]);
 
   useEffect(() => {
     let mounted = true;
     const load = async () => {
       setLoading(true);
       try {
-        const data = isAdmin ? await getAdminNotifications() : await getNotificationsByUser(user?.uid);
+        const data = isAdmin ? await getAdminNotifications() : await getNotificationsByAccount(resolvedIdentity);
         if (mounted) setItems(data);
       } catch (error) {
         console.error('Failed to load notifications', error);
@@ -36,18 +49,18 @@ const NotificationsBoard = () => {
       }
     };
 
-    if (user?.uid || isAdmin) load();
+    if (resolvedIdentity.userId || isAdmin) load();
     else setLoading(false);
 
     return () => { mounted = false; };
-  }, [user?.uid, isAdmin]);
+  }, [resolvedIdentity, isAdmin]);
 
   return (
     <div className="card border-0 shadow-sm h-100">
       <div className="card-header bg-white border-bottom d-flex align-items-center justify-content-between py-3">
         <div>
           <h5 className="mb-0 fw-bold">{title}</h5>
-          <small className="text-muted">{isAdmin ? 'Bản tin hoạt động hệ thống' : `Xin chào ${userProfile?.displayName || 'bạn'}`}</small>
+          <small className="text-muted">{subtitle}</small>
         </div>
         <span className="badge bg-light text-dark border">{items.length}</span>
       </div>
@@ -56,7 +69,7 @@ const NotificationsBoard = () => {
         {loading ? (
           <div className="p-4 text-center text-muted">Đang tải thông báo...</div>
         ) : items.length === 0 ? (
-          <div className="p-4 text-center text-muted">Chưa có thông báo mới.</div>
+          <div className="p-4 text-center text-muted">Chưa có thông báo mới cho tài khoản này.</div>
         ) : (
           <div className="list-group list-group-flush">
             {items.map((item) => {

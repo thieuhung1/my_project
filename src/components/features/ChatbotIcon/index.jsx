@@ -3,7 +3,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import '../../../styles/Chatbot.css';
-import { subscribeToMessages, routeConversationMessage, ensureConversationThread, clearSupportChatCache } from '../../../features/controllers/supportChatService';
+import { subscribeToMessages, routeConversationMessage, ensureConversationThread } from '../../../features/controllers/supportChatService';
 import { useAuth } from '../../../contexts/AuthContext';
 
 const quickReplies = [
@@ -70,13 +70,13 @@ const Chatbot = () => {
   useEffect(() => {
     if (!isOpen) return undefined;
     return () => {
+      // Chỉ reset hiển thị khi đóng popup, KHÔNG xóa lịch sử trên database.
       setMessages([]);
       setIsInitialized(false);
       setIsHandedOff(false);
       setInput('');
-      clearSupportChatCache(chatId);
     };
-  }, [chatId, isOpen]);
+  }, [isOpen]);
 
   useEffect(() => {
     if (messagesEndRef.current && isOpen) {

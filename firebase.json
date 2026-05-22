@@ -1,5 +1,6 @@
 {
   "hosting": {
+    "site": "shop1-f2616",
     "public": "build",
     "ignore": [
       "firebase.json",
@@ -15,6 +16,10 @@
   },
   "database": {
     "rules": "database.rules.json"
+  },
+  "firestore": {
+    "rules": "src/firebase/firestore.rules",
+    "indexes": "src/firebase/firestore.indexes.json"
   },
   "functions": [
     {

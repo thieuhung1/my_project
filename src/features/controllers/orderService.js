@@ -1,10 +1,3 @@
-// orderService.js - Tầng truy cập dữ liệu cho đơn hàng.
-// File này lo toàn bộ CRUD đơn hàng, kiểm tra tồn kho, cập nhật trạng thái,
-// gán shipper và phát thông báo khi có đơn mới.
-//
-// Tất cả hàm quan trọng đều được bọc bằng Firestore transaction hoặc helper normalize
-// để đảm bảo dữ liệu đơn hàng nhất quán và tránh lưu trạng thái sai.
-
 import {
   collection,
   doc,
@@ -31,45 +24,11 @@ import { createNotification, NOTIFICATION_TYPES } from './notificationService';
 export const COLLECTION_NAME = 'orders';
 export const PRODUCTS_COLLECTION = 'products';
 
-// Các Set này dùng để kiểm tra nhanh trạng thái đầu vào có hợp lệ hay không.
-// Nhờ vậy các hàm normalize bên dưới có thể trả về giá trị mặc định an toàn nếu dữ liệu sai.
 const ORDER_STATUS_SET = new Set(Object.values(ORDER_STATUS));
 const PAYMENT_STATUS_SET = new Set(Object.values(PAYMENT_STATUS));
 const PAYMENT_METHOD_SET = new Set(Object.values(PAYMENT_METHOD));
 const PAYMENT_PROVIDER_SET = new Set(Object.values(PAYMENT_PROVIDER));
 
-// Hàm kiểm tra tồn kho của từng sản phẩm trong transaction.
-// Input: transaction Firestore và một item trong giỏ.
-// Output: không trả về gì, nhưng sẽ throw lỗi nếu sản phẩm không tồn tại hoặc không đủ số lượng.
-// Lý do dùng transaction là để đọc stock nhất quán trước khi trừ hàng.
-const ensureProductStock = async (transaction, item) => {
-  const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
-  const productSnap = await transaction.get(productRef);
-
-  if (!productSnap.exists()) {
-    throw new Error(`Sản phẩm ${item.productName} không tồn tại!`);
-  }
-
-  const currentStock = productSnap.data().stock || 0;
-  if (currentStock < item.quantity) {
-    throw new Error(`Sản phẩm ${item.productName} vừa mới hết hàng hoặc không đủ số lượng (Chỉ còn ${currentStock}).`);
-  }
-};
-
-// Hàm trừ số lượng tồn kho sau khi đã kiểm tra đủ hàng.
-// Input: transaction Firestore và item đặt hàng.
-// Side effect: cập nhật trực tiếp field `stock` và `updatedAt` của sản phẩm.
-const decrementProductStock = (transaction, item) => {
-  const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
-  transaction.update(productRef, {
-    stock: increment(-item.quantity),
-    updatedAt: serverTimestamp(),
-  });
-};
-
-// Hàm cập nhật một document đơn hàng và luôn gắn lại `updatedAt`.
-// Input: orderId và object dữ liệu cần cập nhật.
-// Side effect: ghi trực tiếp vào Firestore collection `orders`.
 const updateOrderDoc = async (orderId, data) => {
   const docRef = doc(db, COLLECTION_NAME, orderId);
   await updateDoc(docRef, {
@@ -78,35 +37,171 @@ const updateOrderDoc = async (orderId, data) => {
   });
 };
 
-// Các hàm normalize này đảm bảo dữ liệu đầu vào luôn rơi về giá trị hợp lệ.
-// Chúng giúp tránh việc lưu trạng thái sai vào Firestore khi caller truyền dữ liệu lỗi.
 const normalizeOrderStatus = (status) => (ORDER_STATUS_SET.has(status) ? status : ORDER_STATUS.PENDING);
 const normalizePaymentStatus = (status) => (PAYMENT_STATUS_SET.has(status) ? status : PAYMENT_STATUS.UNPAID);
 const normalizePaymentMethod = (method) => (PAYMENT_METHOD_SET.has(method) ? method : PAYMENT_METHOD.COD);
 const normalizePaymentProvider = (provider) => (PAYMENT_PROVIDER_SET.has(provider) ? provider : PAYMENT_PROVIDER.LOCAL);
+const normalizeOrderType = (type) => (type === 'DINE_IN' ? 'DINE_IN' : 'DELIVERY');
 
-// Tạo đơn hàng mới.
-// Hàm này chạy trong Firestore transaction để đảm bảo:
-// 1) kiểm tra đủ tồn kho cho tất cả sản phẩm
-// 2) trừ kho atomically
-// 3) lưu đơn hàng với dữ liệu đã chuẩn hóa
-// 4) tạo notification cho admin
-// Input: orderData chứa items, user info, payment info và metadata đơn.
-// Output: trả về `orderId` vừa tạo.
+const ORDER_STATUS_TRANSITIONS_BY_TYPE = {
+  DELIVERY: {
+    [ORDER_STATUS.PENDING]: new Set([ORDER_STATUS.WAITING_FOR_SHIPPER, ORDER_STATUS.CONFIRMED, ORDER_STATUS.FAILED]),
+    [ORDER_STATUS.WAITING_FOR_SHIPPER]: new Set([ORDER_STATUS.CONFIRMED, ORDER_STATUS.FAILED]),
+    [ORDER_STATUS.CONFIRMED]: new Set([ORDER_STATUS.DELIVERING, ORDER_STATUS.FAILED]),
+    [ORDER_STATUS.DELIVERING]: new Set([ORDER_STATUS.COMPLETED, ORDER_STATUS.FAILED]),
+    [ORDER_STATUS.COMPLETED]: new Set(),
+    [ORDER_STATUS.CANCELLED]: new Set(),
+    [ORDER_STATUS.FAILED]: new Set(),
+  },
+  DINE_IN: {
+    [ORDER_STATUS.PENDING]: new Set([ORDER_STATUS.CONFIRMED, ORDER_STATUS.FAILED]),
+    [ORDER_STATUS.CONFIRMED]: new Set([ORDER_STATUS.COMPLETED, ORDER_STATUS.FAILED]),
+    [ORDER_STATUS.COMPLETED]: new Set(),
+    [ORDER_STATUS.CANCELLED]: new Set(),
+    [ORDER_STATUS.FAILED]: new Set(),
+  },
+};
+
+const canTransitionOrderStatus = (orderType, currentStatus, nextStatus) => {
+  const type = normalizeOrderType(orderType);
+  const mapByType = ORDER_STATUS_TRANSITIONS_BY_TYPE[type] || ORDER_STATUS_TRANSITIONS_BY_TYPE.DELIVERY;
+  const allowed = mapByType[currentStatus];
+  return Boolean(allowed && allowed.has(nextStatus));
+};
+
+const normalizeActorRole = (actorRole) => {
+  const role = String(actorRole || 'staff').trim().toLowerCase();
+  if (role === 'manager') return 'admin';
+  if (role === 'employee') return 'staff';
+  return role;
+};
+
+const appendStatusHistory = (orderData, fromStatus, toStatus, actor = 'system', note = '') => {
+  const safeActor = normalizeActorRole(actor);
+  const safeNote = String(note || '').trim().slice(0, 200);
+  const currentHistory = Array.isArray(orderData.statusHistory) ? orderData.statusHistory : [];
+
+  return [
+    ...currentHistory,
+    {
+      from: fromStatus,
+      to: toStatus,
+      actor: safeActor,
+      note: safeNote,
+      at: new Date().toISOString(),
+    },
+  ];
+};
+
+const TRANSITION_ACTOR_RULES = {
+  [ORDER_STATUS.CONFIRMED]: new Set(['admin', 'staff']),
+  [ORDER_STATUS.WAITING_FOR_SHIPPER]: new Set(['admin', 'staff']),
+  [ORDER_STATUS.DELIVERING]: new Set(['shipper', 'admin']),
+  [ORDER_STATUS.COMPLETED]: new Set(['waiter', 'shipper', 'admin']),
+  [ORDER_STATUS.FAILED]: new Set(['admin', 'staff', 'shipper']),
+};
+
+const assertActorCanSetStatus = (actorRole, nextStatus) => {
+  const role = normalizeActorRole(actorRole);
+  const allowed = TRANSITION_ACTOR_RULES[nextStatus];
+
+  if (!allowed) throw new Error('Không có cấu hình quyền cho trạng thái đích!');
+  if (!allowed.has(role)) throw new Error(`Vai trò ${role} không có quyền chuyển sang ${nextStatus}!`);
+
+  return role;
+};
+
+const notifyOrderStatusChanged = async ({ orderId, orderData, fromStatus, toStatus, actorRole }) => {
+  const userId = String(orderData.userId || '').trim() || null;
+  const role = normalizeActorRole(actorRole);
+  const orderCode = String(orderId).slice(-8).toUpperCase();
+  const statusTextMap = {
+    [ORDER_STATUS.CONFIRMED]: 'đang chuẩn bị',
+    [ORDER_STATUS.DELIVERING]: 'đang giao',
+    [ORDER_STATUS.COMPLETED]: 'đã hoàn thành',
+    [ORDER_STATUS.CANCELLED]: 'đã hủy',
+    [ORDER_STATUS.WAITING_FOR_SHIPPER]: 'đang chờ shipper',
+    [ORDER_STATUS.FAILED]: 'đã thất bại',
+  };
+  const statusText = statusTextMap[toStatus] || toStatus;
+
+  await Promise.allSettled([
+    createNotification({
+      type: toStatus === ORDER_STATUS.CANCELLED ? NOTIFICATION_TYPES.ORDER_CANCELLED : NOTIFICATION_TYPES.ORDER_UPDATED,
+      title: `Đơn #${orderCode} cập nhật trạng thái`,
+      message: `Đơn hàng của bạn hiện ${statusText}.`,
+      audience: 'user',
+      userId,
+      targetId: orderId,
+      actorId: role,
+      actorName: role,
+      meta: { orderId, fromStatus, toStatus },
+    }),
+    createNotification({
+      type: toStatus === ORDER_STATUS.CANCELLED ? NOTIFICATION_TYPES.ORDER_CANCELLED : NOTIFICATION_TYPES.ORDER_UPDATED,
+      title: `Đơn #${orderCode} chuyển ${fromStatus} → ${toStatus}`,
+      message: `Vai trò ${role} đã cập nhật trạng thái đơn.`,
+      audience: 'admin',
+      targetId: orderId,
+      actorId: role,
+      actorName: role,
+      meta: { orderId, fromStatus, toStatus },
+    }),
+  ]);
+};
+
 export const createOrder = async (orderData) => {
   return await runTransaction(db, async (transaction) => {
     const items = Array.isArray(orderData.items) ? orderData.items : [];
+    let backendSubtotal = 0;
+    const validatedItems = [];
 
-    // Bước 1: kiểm tra tồn kho trước để tránh trừ hàng khi có sản phẩm hết.
     for (const item of items) {
-      await ensureProductStock(transaction, item);
+      const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
+      const productSnap = await transaction.get(productRef);
+
+      if (!productSnap.exists()) throw new Error(`Sản phẩm ${item.productName} không tồn tại!`);
+
+      const productData = productSnap.data();
+      const currentStock = productData.stock || 0;
+
+      if (currentStock < item.quantity) {
+        throw new Error(`Sản phẩm ${item.productName} vừa mới hết hàng hoặc không đủ số lượng (Chỉ còn ${currentStock}).`);
+      }
+
+      const price = productData.price || 0;
+      backendSubtotal += price * item.quantity;
+      validatedItems.push({ ...item, price });
+
+      transaction.update(productRef, {
+        stock: increment(-item.quantity),
+        updatedAt: serverTimestamp(),
+      });
     }
 
-    // Bước 2: trừ kho cho từng sản phẩm sau khi đã xác nhận đủ hàng.
-    for (const item of items) {
-      decrementProductStock(transaction, item);
+    let backendDiscountAmount = 0;
+    if (orderData.couponId && orderData.couponCode) {
+      const couponRef = doc(db, 'coupons', orderData.couponId);
+      const couponSnap = await transaction.get(couponRef);
+
+      if (couponSnap.exists()) {
+        const couponData = couponSnap.data();
+        if (couponData.isActive && couponData.code === orderData.couponCode) {
+          if (couponData.minOrderValue && backendSubtotal < couponData.minOrderValue) {
+            throw new Error('Đơn hàng không đủ điều kiện áp dụng mã giảm giá này!');
+          }
+          backendDiscountAmount =
+            couponData.discountType === 'percent'
+              ? Math.round(backendSubtotal * (couponData.discountValue / 100))
+              : couponData.discountValue;
+          backendDiscountAmount = Math.min(backendDiscountAmount, backendSubtotal);
+        } else {
+          throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn!');
+        }
+      }
     }
 
+    const backendTotalAmount = backendSubtotal - backendDiscountAmount;
     const orderRef = doc(collection(db, COLLECTION_NAME));
     const initialStatus = orderData.type === 'DINE_IN' ? ORDER_STATUS.CONFIRMED : ORDER_STATUS.PENDING;
 
@@ -117,7 +212,6 @@ export const createOrder = async (orderData) => {
         ? PAYMENT_STATUS.PENDING
         : normalizePaymentStatus(orderData.paymentStatus);
 
-    // Chuẩn hóa dữ liệu đầu vào trước khi ghi vào DB.
     const sanitizedOrderData = {
       ...orderData,
       userId: String(orderData.userId || '').trim(),
@@ -126,92 +220,357 @@ export const createOrder = async (orderData) => {
       address: String(orderData.address || '').trim().slice(0, 250),
       note: String(orderData.note || '').trim().slice(0, 500),
       type: String(orderData.type || '').trim(),
-      items,
+      items: validatedItems,
+      subtotal: backendSubtotal,
+      discountAmount: backendDiscountAmount,
+      totalAmount: backendTotalAmount,
       status: normalizeOrderStatus(initialStatus),
       paymentMethod,
       paymentStatus,
       paymentProvider,
     };
 
-    // Ghi đơn hàng mới vào Firestore.
     transaction.set(orderRef, {
       ...sanitizedOrderData,
+      tableVacated: sanitizedOrderData.type === 'DINE_IN' ? false : null,
+      tableVacatedAt: null,
+      statusHistory: [
+        {
+          from: null,
+          to: sanitizedOrderData.status,
+          actor: 'system',
+          note: 'Tạo đơn hàng',
+          at: new Date().toISOString(),
+        },
+      ],
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
 
     const orderId = orderRef.id;
-    const orderTotal = Number(sanitizedOrderData.totalAmount || sanitizedOrderData.total || 0);
 
-    // Tạo notification không chặn luồng chính.
-    // Nếu notification lỗi thì log ra console, nhưng không làm fail việc tạo đơn.
     createNotification({
       type: NOTIFICATION_TYPES.ORDER_CREATED,
       title: 'Đơn hàng mới đã được tạo',
-      message: `Đơn ${String(orderId).slice(-8).toUpperCase()} với tổng ${orderTotal.toLocaleString('vi-VN')}₫ đã được tạo.`,
+      message: `Đơn ${String(orderId).slice(-8).toUpperCase()} với tổng ${backendTotalAmount.toLocaleString('vi-VN')}₫ đã được tạo.`,
       audience: 'admin',
       targetId: orderId,
       userId: sanitizedOrderData.userId,
       actorId: sanitizedOrderData.userId,
       actorName: sanitizedOrderData.userName,
-      meta: { orderId, total: orderTotal },
+      meta: { orderId, total: backendTotalAmount },
     }).catch((error) => console.error('Failed to create order notification', error));
 
     return orderId;
   });
 };
 
-// Cập nhật trạng thái thanh toán của một đơn.
-// Hàm này chỉ normalize trạng thái trước khi ghi để tránh payment status sai định dạng.
+export const cancelOrder = async (orderId, cancelReason = 'Hủy đơn hàng', actorRole = 'admin') => {
+  const actor = normalizeActorRole(actorRole);
+  let orderDataForNotify = null;
+  let fromStatus = ORDER_STATUS.PENDING;
+
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    if (orderData.status === ORDER_STATUS.CANCELLED || orderData.status === ORDER_STATUS.COMPLETED) {
+      throw new Error('Không thể hủy đơn hàng đang ở trạng thái hiện tại!');
+    }
+
+    if (!['admin', 'staff'].includes(actor)) throw new Error('Bạn không có quyền hủy đơn hàng!');
+
+    fromStatus = normalizeOrderStatus(orderData.status);
+    const statusHistory = appendStatusHistory(orderData, fromStatus, ORDER_STATUS.CANCELLED, actor, cancelReason || 'Hủy đơn hàng');
+
+    transaction.update(orderRef, {
+      status: ORDER_STATUS.CANCELLED,
+      cancelReason,
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+
+    orderDataForNotify = orderData;
+
+    const items = Array.isArray(orderData.items) ? orderData.items : [];
+    for (const item of items) {
+      const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
+      transaction.update(productRef, {
+        stock: increment(item.quantity),
+        updatedAt: serverTimestamp(),
+      });
+    }
+  });
+
+  if (orderDataForNotify) {
+    notifyOrderStatusChanged({
+      orderId,
+      orderData: orderDataForNotify,
+      fromStatus,
+      toStatus: ORDER_STATUS.CANCELLED,
+      actorRole: actor,
+    }).catch((error) => console.error('Failed to notify cancel order status', error));
+  }
+};
+
 export const updatePaymentStatus = async (orderId, paymentStatus) => {
   await updateOrderDoc(orderId, { paymentStatus: normalizePaymentStatus(paymentStatus) });
 };
 
-// Lấy chi tiết một đơn theo ID.
-// Input: orderId.
-// Output: object đơn hàng, hoặc throw lỗi nếu không tồn tại.
 export const getOrderById = async (orderId) => {
   const docRef = doc(db, COLLECTION_NAME, orderId);
   const snapshot = await getDoc(docRef);
-  return getDocDataOrThrow(snapshot, "Đơn hàng không tồn tại!");
+  return getDocDataOrThrow(snapshot, 'Đơn hàng không tồn tại!');
 };
 
-// Lấy danh sách đơn của một người dùng.
-// Dữ liệu được sắp xếp theo `createdAt` giảm dần để đơn mới nhất nằm trên cùng.
 export const getOrdersByUser = async (userId) => {
-  const q = query(collection(db, COLLECTION_NAME), where("userId", "==", userId), orderBy("createdAt", "desc"));
+  const q = query(collection(db, COLLECTION_NAME), where('userId', '==', userId), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(q);
   return mapDocs(snapshot);
 };
 
-// Lấy toàn bộ đơn hàng trong hệ thống.
-// Đây thường là API cho trang admin quản lý đơn.
 export const getAllOrders = async () => {
-  const q = query(collection(db, COLLECTION_NAME), orderBy("createdAt", "desc"));
+  const q = query(collection(db, COLLECTION_NAME), orderBy('createdAt', 'desc'));
   const snapshot = await getDocs(q);
   return mapDocs(snapshot);
 };
 
-// Cập nhật trạng thái xử lý của đơn hàng.
-// Hàm này normalize trạng thái trước khi ghi để tránh lưu giá trị không hợp lệ.
-export const updateOrderStatus = async (orderId, status) => {
-  await updateOrderDoc(orderId, { status: normalizeOrderStatus(status) });
-};
+export const updateOrderStatus = async (orderId, status, actorRole = 'staff') => {
+  const normStatus = normalizeOrderStatus(status);
+  if (normStatus !== status) throw new Error('Trạng thái đơn hàng không hợp lệ!');
+  if (normStatus === ORDER_STATUS.CANCELLED) {
+    throw new Error('Vui lòng sử dụng hàm cancelOrder() để hủy đơn hàng và hoàn trả tồn kho!');
+  }
 
-// Lấy danh sách đơn đang gán cho một shipper.
-// Dùng cho màn hình shipper để xem các đơn được phân công.
-export const getOrdersByShipper = async (shipperId) => {
-  const q = query(collection(db, COLLECTION_NAME), where("shipperId", "==", shipperId), orderBy("createdAt", "desc"));
-  const snapshot = await getDocs(q);
-  return mapDocs(snapshot);
-};
+  const actor = assertActorCanSetStatus(actorRole, normStatus);
+  let fromStatus = ORDER_STATUS.PENDING;
+  let orderDataForNotify = null;
 
-// Gán đơn cho shipper.
-// Side effect: cập nhật `shipperId`, `shipperName` và đẩy trạng thái về `CONFIRMED`.
-export const assignOrderToShipper = async (orderId, shipperId, shipperName) => {
-  await updateOrderDoc(orderId, {
-    shipperId,
-    shipperName: shipperName || "",
-    status: ORDER_STATUS.CONFIRMED,
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    const currentStatus = normalizeOrderStatus(orderData.status);
+    const orderType = normalizeOrderType(orderData.type);
+
+    if (currentStatus === normStatus) return;
+
+    if (!canTransitionOrderStatus(orderType, currentStatus, normStatus)) {
+      throw new Error(`Không thể chuyển trạng thái từ ${currentStatus} sang ${normStatus} cho đơn ${orderType}!`);
+    }
+
+    const statusHistory = appendStatusHistory(orderData, currentStatus, normStatus, actor, 'Cập nhật trạng thái đơn');
+
+    transaction.update(orderRef, {
+      status: normStatus,
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+
+    fromStatus = currentStatus;
+    orderDataForNotify = orderData;
   });
+
+  if (orderDataForNotify) {
+    notifyOrderStatusChanged({
+      orderId,
+      orderData: orderDataForNotify,
+      fromStatus,
+      toStatus: normStatus,
+      actorRole: actor,
+    }).catch((error) => console.error('Failed to notify order status changed', error));
+  }
+};
+
+export const getOrdersByShipper = async (shipperId) => {
+  const q = query(collection(db, COLLECTION_NAME), where('shipperId', '==', shipperId), orderBy('createdAt', 'desc'));
+  const snapshot = await getDocs(q);
+  return mapDocs(snapshot);
+};
+
+export const markTableVacated = async (orderId, actorRole = 'waiter') => {
+  const actor = normalizeActorRole(actorRole);
+  if (!['waiter', 'admin', 'staff'].includes(actor)) {
+    throw new Error('Bạn không có quyền xác nhận khách đã về!');
+  }
+
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    if (orderData.type !== 'DINE_IN') {
+      throw new Error('Chỉ đơn ăn tại quán mới có thao tác khách đã về!');
+    }
+
+    if (normalizeOrderStatus(orderData.status) !== ORDER_STATUS.COMPLETED) {
+      throw new Error('Đơn chưa hoàn tất thanh toán, chưa thể xác nhận khách đã về!');
+    }
+
+    if (orderData.tableVacated === true) {
+      return;
+    }
+
+    const statusHistory = appendStatusHistory(
+      orderData,
+      ORDER_STATUS.COMPLETED,
+      ORDER_STATUS.COMPLETED,
+      actor,
+      'Khách đã rời bàn'
+    );
+
+    transaction.update(orderRef, {
+      tableVacated: true,
+      tableVacatedAt: serverTimestamp(),
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+  });
+};
+
+export const claimDeliveryOrder = async (orderId, shipperId, shipperName) => {
+  if (!shipperId) throw new Error('Thiếu thông tin shipper!');
+
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    if (normalizeOrderType(orderData.type) !== 'DELIVERY') {
+      throw new Error('Chỉ đơn giao hàng mới có thể nhận bởi shipper!');
+    }
+
+    const currentStatus = normalizeOrderStatus(orderData.status);
+    if (![ORDER_STATUS.PENDING, ORDER_STATUS.WAITING_FOR_SHIPPER].includes(currentStatus)) {
+      throw new Error('Đơn không còn ở trạng thái có thể nhận!');
+    }
+
+    const statusHistory = appendStatusHistory(orderData, currentStatus, ORDER_STATUS.CONFIRMED, 'shipper', 'Shipper nhận đơn');
+
+    transaction.update(orderRef, {
+      shipperId,
+      shipperName: shipperName || 'Shipper',
+      status: ORDER_STATUS.CONFIRMED,
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+  });
+};
+
+export const startDeliveringOrder = async (orderId, shipperId) => {
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    if (orderData.shipperId !== shipperId) {
+      throw new Error('Bạn không được phép thao tác đơn của shipper khác!');
+    }
+
+    if (normalizeOrderStatus(orderData.status) !== ORDER_STATUS.CONFIRMED) {
+      throw new Error('Đơn chưa ở trạng thái đã nhận!');
+    }
+
+    const statusHistory = appendStatusHistory(orderData, ORDER_STATUS.CONFIRMED, ORDER_STATUS.DELIVERING, 'shipper', 'Bắt đầu giao hàng');
+
+    transaction.update(orderRef, {
+      status: ORDER_STATUS.DELIVERING,
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+  });
+};
+
+export const completeDeliveryOrder = async (orderId, shipperId) => {
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    if (orderData.shipperId !== shipperId) {
+      throw new Error('Bạn không được phép thao tác đơn của shipper khác!');
+    }
+
+    if (normalizeOrderStatus(orderData.status) !== ORDER_STATUS.DELIVERING) {
+      throw new Error('Đơn chưa ở trạng thái đang giao!');
+    }
+
+    const statusHistory = appendStatusHistory(orderData, ORDER_STATUS.DELIVERING, ORDER_STATUS.COMPLETED, 'shipper', 'Giao hàng thành công');
+
+    transaction.update(orderRef, {
+      status: ORDER_STATUS.COMPLETED,
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+  });
+};
+
+export const assignOrderToShipper = async (orderId, shipperId, shipperName, actorRole = 'admin') => {
+  const actor = normalizeActorRole(actorRole);
+  if (!['admin', 'staff'].includes(actor)) {
+    throw new Error('Bạn không có quyền gán shipper cho đơn hàng!');
+  }
+
+  let orderDataForNotify = null;
+
+  await runTransaction(db, async (transaction) => {
+    const orderRef = doc(db, COLLECTION_NAME, orderId);
+    const orderSnap = await transaction.get(orderRef);
+
+    if (!orderSnap.exists()) throw new Error('Đơn hàng không tồn tại!');
+
+    const orderData = orderSnap.data();
+    if (orderData.status !== ORDER_STATUS.WAITING_FOR_SHIPPER) {
+      throw new Error('Đơn hàng đã được nhận bởi người khác hoặc không còn chờ giao!');
+    }
+
+    const statusHistory = appendStatusHistory(orderData, ORDER_STATUS.WAITING_FOR_SHIPPER, ORDER_STATUS.CONFIRMED, actor, 'Gán shipper');
+
+    transaction.update(orderRef, {
+      shipperId,
+      shipperName: shipperName || '',
+      status: ORDER_STATUS.CONFIRMED,
+      statusHistory,
+      updatedAt: serverTimestamp(),
+    });
+
+    orderDataForNotify = orderData;
+  });
+
+  const orderCode = String(orderId).slice(-8).toUpperCase();
+  await Promise.allSettled([
+    createNotification({
+      type: NOTIFICATION_TYPES.ORDER_ASSIGNED,
+      title: `Đơn #${orderCode} đã được gán shipper`,
+      message: `Đơn hàng đang được chuẩn bị giao.`,
+      audience: 'admin',
+      targetId: orderId,
+      actorId: actor,
+      actorName: actor,
+      meta: { orderId, shipperId, shipperName: shipperName || '' },
+    }),
+    orderDataForNotify
+      ? notifyOrderStatusChanged({
+          orderId,
+          orderData: orderDataForNotify,
+          fromStatus: ORDER_STATUS.WAITING_FOR_SHIPPER,
+          toStatus: ORDER_STATUS.CONFIRMED,
+          actorRole: actor,
+        })
+      : Promise.resolve(),
+  ]);
 };

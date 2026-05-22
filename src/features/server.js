@@ -3,6 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 
 const { createVnpayRouter } = require('../app/routes/vnpay.routes');
+const { createEmailRouter } = require('../app/routes/email.routes');
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.get('/health', (_req, res) => {
 });
 
 app.use('/api/vnpay', createVnpayRouter());
+app.use('/api/email', createEmailRouter());
 
 app.use((err, _req, res, _next) => {
   console.error('Unhandled backend error:', err);
