@@ -155,6 +155,7 @@ export const createOrder = async (orderData) => {
     const items = Array.isArray(orderData.items) ? orderData.items : [];
     let backendSubtotal = 0;
     const validatedItems = [];
+    const productUpdates = [];
 
     for (const item of items) {
       const productRef = doc(db, PRODUCTS_COLLECTION, item.productId);
@@ -172,11 +173,7 @@ export const createOrder = async (orderData) => {
       const price = productData.price || 0;
       backendSubtotal += price * item.quantity;
       validatedItems.push({ ...item, price });
-
-      transaction.update(productRef, {
-        stock: increment(-item.quantity),
-        updatedAt: serverTimestamp(),
-      });
+      productUpdates.push({ productRef, quantity: item.quantity });
     }
 
     let backendDiscountAmount = 0;
@@ -199,6 +196,13 @@ export const createOrder = async (orderData) => {
           throw new Error('Mã giảm giá không hợp lệ hoặc đã hết hạn!');
         }
       }
+    }
+
+    for (const { productRef, quantity } of productUpdates) {
+      transaction.update(productRef, {
+        stock: increment(-quantity),
+        updatedAt: serverTimestamp(),
+      });
     }
 
     const backendTotalAmount = backendSubtotal - backendDiscountAmount;

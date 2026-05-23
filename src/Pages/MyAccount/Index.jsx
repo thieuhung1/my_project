@@ -35,12 +35,51 @@ const MyAccount = () => {
   };
 
   const onPickFile = () => fileRef.current?.click();
-  const onFileChange = (e) => {
+
+  const compressImageToDataUrl = (file, maxSize = 512, quality = 0.75) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const ratio = Math.min(maxSize / img.width, maxSize / img.height, 1);
+        const width = Math.round(img.width * ratio);
+        const height = Math.round(img.height * ratio);
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Không thể xử lý ảnh'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0, width, height);
+
+        let compressed = canvas.toDataURL('image/jpeg', quality);
+        if (compressed.length > 900000) {
+          compressed = canvas.toDataURL('image/jpeg', 0.6);
+        }
+        resolve(compressed);
+      };
+      img.onerror = () => reject(new Error('File ảnh không hợp lệ'));
+      img.src = reader.result;
+    };
+    reader.onerror = () => reject(new Error('Không đọc được file ảnh'));
+    reader.readAsDataURL(file);
+  });
+
+  const onFileChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => setProfile(p => ({ ...p, photoURL: reader.result }));
-    reader.readAsDataURL(file);
+
+    try {
+      const compressedPhotoURL = await compressImageToDataUrl(file);
+      setProfile((p) => ({ ...p, photoURL: compressedPhotoURL }));
+    } catch (err) {
+      alert(err.message || 'Không thể tải ảnh lên');
+    }
   };
 
   return (
