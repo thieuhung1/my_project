@@ -1,6 +1,3 @@
-// HeaderMenuItems.jsx - Hook tạo danh sách menu tài khoản theo vai trò.
-// File này quyết định user thấy những mục điều hướng nào trong dropdown header.
-
 import { useMemo } from 'react';
 
 export const useHeaderMenuItems = ({ isAuthenticated, isAdmin, isShipper, isWaiter }) => {

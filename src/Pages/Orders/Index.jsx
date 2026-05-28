@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCart } from '../../contexts/CartContext';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { db } from '../../firebase/firebase.Config';
 
 const fmt = n => (typeof n === 'number' ? n.toLocaleString('vi-VN') + 'đ' : n);
 const phoneRegex = /^(0[3|5|7|8|9])[0-9]{8}$/;
@@ -20,6 +22,33 @@ const Orders = () => {
   const [note, setNote] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [occupiedTables, setOccupiedTables] = useState(new Set());
+
+  // Lấy danh sách bàn đang có khách từ Firestore
+  useEffect(() => {
+    if (orderType !== 'DINE_IN') return;
+    const fetchOccupied = async () => {
+      try {
+        // Query tất cả đơn DINE_IN, lọc phía client để tránh lỗi Firestore với != trên field không tồn tại
+        const snap = await getDocs(
+          query(collection(db, 'orders'), where('type', '==', 'DINE_IN'))
+        );
+        const active = new Set();
+        snap.docs.forEach(doc => {
+          const d = doc.data();
+          // Bỏ qua đơn đã hủy/thất bại
+          if (['CANCELLED', 'FAILED'].includes(d.status)) return;
+          // Bỏ qua đơn đã vacated
+          if (d.tableVacated === true) return;
+          if (d.table_id) active.add(String(d.table_id).trim());
+        });
+        setOccupiedTables(active);
+      } catch (e) {
+        console.error('Lỗi tải trạng thái bàn:', e);
+      }
+    };
+    fetchOccupied();
+  }, [orderType]);
 
   useEffect(() => {
     if (userProfile) {
@@ -66,6 +95,7 @@ const Orders = () => {
       if (!address.toLowerCase().includes('nghệ an')) { setError('FoodHub chỉ giao trong Nghệ An'); return; }
     } else {
       if (!tableId.trim()) { setError('Vui lòng nhập số bàn'); return; }
+      if (occupiedTables.has(tableId)) { setError(`${tableId} đang có khách, vui lòng chọn bàn khác`); return; }
     }
 
     setLoading(true);
@@ -173,24 +203,38 @@ const Orders = () => {
                           {Array.from({ length: 20 }, (_, i) => i + 1).map((tableNumber) => {
                             const value = `Bàn ${tableNumber}`;
                             const active = tableId === value;
+                            const occupied = occupiedTables.has(value);
                             return (
                               <button
                                 key={tableNumber}
                                 type="button"
-                                onClick={() => setTableId(value)}
+                                onClick={() => !occupied && setTableId(value)}
+                                disabled={occupied}
+                                title={occupied ? 'Bàn đang có khách' : `Chọn ${value}`}
                                 className="btn"
                                 style={{
                                   borderRadius:12,
-                                  border: active ? '1px solid #f97316' : '1px solid #fdba74',
-                                  background: active ? 'linear-gradient(135deg,#f97316,#fb923c)' : '#fff',
-                                  color: active ? '#fff' : '#9a3412',
+                                  border: occupied
+                                    ? '1px solid #fecdd3'
+                                    : active ? '1px solid #f97316' : '1px solid #fdba74',
+                                  background: occupied
+                                    ? '#fff1f2'
+                                    : active ? 'linear-gradient(135deg,#f97316,#fb923c)' : '#fff',
+                                  color: occupied
+                                    ? '#9f1239'
+                                    : active ? '#fff' : '#9a3412',
                                   fontWeight: 700,
                                   padding: '10px 8px',
                                   boxShadow: active ? '0 8px 20px rgba(249,115,22,.25)' : 'none',
                                   transition: 'all .15s ease',
+                                  cursor: occupied ? 'not-allowed' : 'pointer',
+                                  opacity: occupied ? 0.85 : 1,
                                 }}
                               >
-                                Bàn {tableNumber}
+                                <div>Bàn {tableNumber}</div>
+                                {occupied && (
+                                  <div style={{fontSize:10,marginTop:3,opacity:.9}}>Có khách</div>
+                                )}
                               </button>
                             );
                           })}

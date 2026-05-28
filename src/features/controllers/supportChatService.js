@@ -1,355 +1,256 @@
-// supportChatService.js - Tầng truy cập dữ liệu cho chatbot và hỗ trợ admin.
-// File này điều phối toàn bộ luồng chat: tạo thread, gửi tin nhắn, đọc realtime,
-// phân loại intent, gọi AI và fallback sang admin khi cần.
+// supportChatService.js — Điều phối toàn bộ luồng chat: tạo thread, gửi tin,
+// fetch dữ liệu thực, gọi Gemini với context đầy đủ, fallback sang admin.
 
 import {
-  ref,
-  push,
-  set,
-  update,
-  onValue,
-  get,
-  query,
-  orderByChild,
-  limitToLast,
-  serverTimestamp,
+  ref, push, set, update, onValue, get,
+  query, orderByChild, limitToLast, serverTimestamp,
 } from 'firebase/database';
 import { rtdb } from '../../firebase/firebase.Config';
-import { aiModel, buildConversationContext } from './supportChatRuntime';
-import { classifyIntent, INTENT_TYPES, resolveKnowledge } from './supportChatKnowledge';
-import { sanitizeChatId, sanitizeMessageText, sanitizeUserName, normalizeText } from './supportChatUtils';
-import { persistSupportChatState, readSupportChatState, clearSupportChatState, clearAllSupportChatCache as clearAllSupportChatState } from './supportChatPersistence';
+import { createAiModel, buildConversationContext } from './supportChatRuntime';
+import { classifyIntent, detectDataNeeds, fetchContextData, INTENT_TYPES } from './supportChatKnowledge';
+import { sanitizeChatId, sanitizeMessageText, sanitizeUserName } from './supportChatUtils';
+import {
+  persistSupportChatState, readSupportChatState,
+  clearSupportChatState, clearAllSupportChatCache as clearAllSupportChatState,
+} from './supportChatPersistence';
 
 const SUPPORT_CHATS_PATH = 'supportChats';
-const SUPPORT_MESSAGES_PATH = (chatId) => `${SUPPORT_CHATS_PATH}/${chatId}/messages`;
-const SUPPORT_CHAT_PATH = (chatId) => `${SUPPORT_CHATS_PATH}/${chatId}`;
+const MESSAGES_PATH = (id) => `${SUPPORT_CHATS_PATH}/${id}/messages`;
+const CHAT_PATH = (id) => `${SUPPORT_CHATS_PATH}/${id}`;
 
-const SESSION_STORAGE_PREFIX = 'foodhub_support_chat_session';
-const hasBrowserStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
-const getSessionKey = (userId) => `${SESSION_STORAGE_PREFIX}:${String(userId || 'anon').trim()}`;
+const SESSION_KEY = (uid) => `foodhub_chat_session:${String(uid || 'anon').trim()}`;
+const hasStorage = () => typeof window !== 'undefined' && typeof window.sessionStorage !== 'undefined';
 
-// Xóa cache hội thoại trong sessionStorage.
-// Dùng khi load lại trang hoặc khởi tạo thread mới để đảm bảo mỗi phiên là độc lập.
-const clearSessionMessages = (userId) => {
-  if (!hasBrowserStorage()) return;
-  try {
-    window.sessionStorage.removeItem(getSessionKey(userId));
-  } catch {
-    // ignore storage errors
-  }
+const saveSession = (uid, messages) => {
+  if (!hasStorage()) return;
+  try { window.sessionStorage.setItem(SESSION_KEY(uid), JSON.stringify({ savedAt: Date.now(), messages })); } catch {}
 };
-
-// Lưu lại bản sao messages vào sessionStorage.
-// Điều này cho phép khôi phục context AI trong cùng một phiên mà không dùng chung giữa các tài khoản.
-const saveSessionMessages = (userId, messages) => {
-  if (!hasBrowserStorage()) return;
+const readSession = (uid) => {
+  if (!hasStorage()) return null;
   try {
-    window.sessionStorage.setItem(getSessionKey(userId), JSON.stringify({
-      savedAt: Date.now(),
-      messages,
-    }));
-  } catch {
-    // ignore storage errors
-  }
-};
-
-// Đọc messages đã lưu trong sessionStorage.
-// Nếu không có dữ liệu hợp lệ thì trả về null để caller dùng mảng rỗng hoặc dữ liệu realtime.
-const readSessionMessages = (userId) => {
-  if (!hasBrowserStorage()) return null;
-  try {
-    const raw = window.sessionStorage.getItem(getSessionKey(userId));
+    const raw = window.sessionStorage.getItem(SESSION_KEY(uid));
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed?.messages) ? parsed.messages : null;
-  } catch {
-    return null;
-  }
+    const p = JSON.parse(raw);
+    return Array.isArray(p?.messages) ? p.messages : null;
+  } catch { return null; }
+};
+const clearSession = (uid) => {
+  if (!hasStorage()) return;
+  try { window.sessionStorage.removeItem(SESSION_KEY(uid)); } catch {}
 };
 
-// Chuẩn hóa chatId trước khi build ref để tránh path lỗi hoặc ký tự nguy hiểm.
-const getSafeChatId = (chatId) => sanitizeChatId(chatId);
-const getSafeChatRef = (chatId) => ref(rtdb, SUPPORT_CHAT_PATH(getSafeChatId(chatId)));
-const getSafeMessagesRef = (chatId) => ref(rtdb, SUPPORT_MESSAGES_PATH(getSafeChatId(chatId)));
+const safeId = (id) => sanitizeChatId(id);
+const chatRef = (id) => ref(rtdb, CHAT_PATH(safeId(id)));
+const msgsRef = (id) => ref(rtdb, MESSAGES_PATH(safeId(id)));
 
-// Chuyển snapshot RTDB thành mảng object dễ xử lý trong React.
-// Mỗi key con trong snapshot được gắn lại vào trường `id`.
-const snapshotToList = (snapshot) => {
-  if (!snapshot.exists()) return [];
-  const data = snapshot.val();
-  return Object.keys(data).map((key) => ({ id: key, ...data[key] }));
+const snapshotToList = (snap) => {
+  if (!snap.exists()) return [];
+  const data = snap.val();
+  return Object.keys(data).map((k) => ({ id: k, ...data[k] }));
 };
 
-export const getSupportChats = async (limitCount = 50) => {
-  const chatsRef = ref(rtdb, SUPPORT_CHATS_PATH);
-  const q = query(chatsRef, orderByChild('lastMessageTime'), limitToLast(limitCount));
-  const snapshot = await get(q);
-  const chats = snapshotToList(snapshot).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
-  return chats.map((chat) => {
-    const persisted = readSupportChatState(chat.id);
-    return persisted ? { ...chat, ...persisted } : chat;
-  });
+// ─── Public API ────────────────────────────────────────────────────────────
+
+export const getSupportChats = async (limit = 50) => {
+  const q = query(ref(rtdb, SUPPORT_CHATS_PATH), orderByChild('lastMessageTime'), limitToLast(limit));
+  const snap = await get(q);
+  return snapshotToList(snap)
+    .sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0))
+    .map((c) => { const p = readSupportChatState(c.id); return p ? { ...c, ...p } : c; });
 };
 
 export const subscribeToSupportChats = (callback) => {
-  const chatsRef = ref(rtdb, SUPPORT_CHATS_PATH);
-  const q = query(chatsRef, orderByChild('lastMessageTime'));
-  return onValue(q, (snapshot) => {
-    const chats = snapshotToList(snapshot).sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
-    callback(chats.map((chat) => {
-      const persisted = readSupportChatState(chat.id);
-      return persisted ? { ...chat, ...persisted } : chat;
-    }));
+  const q = query(ref(rtdb, SUPPORT_CHATS_PATH), orderByChild('lastMessageTime'));
+  return onValue(q, (snap) => {
+    const chats = snapshotToList(snap)
+      .sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0))
+      .map((c) => { const p = readSupportChatState(c.id); return p ? { ...c, ...p } : c; });
+    callback(chats);
   });
 };
 
-export const getChatMessages = async (chatId, limitCount = 100) => {
-  const messagesRef = getSafeMessagesRef(chatId);
-  const q = query(messagesRef, limitToLast(limitCount));
-  const snapshot = await get(q);
-  return snapshotToList(snapshot);
+export const getChatMessages = async (chatId, limit = 100) => {
+  const q = query(msgsRef(chatId), limitToLast(limit));
+  const snap = await get(q);
+  return snapshotToList(snap);
 };
 
 export const subscribeToMessages = (chatId, callback, userId) => {
-  const messagesRef = getSafeMessagesRef(chatId);
-  return onValue(messagesRef, (snapshot) => {
-    const messages = snapshotToList(snapshot);
+  return onValue(msgsRef(chatId), (snap) => {
+    const messages = snapshotToList(snap);
     callback(messages);
     persistSupportChatState(chatId, { messages });
-    if (userId) saveSessionMessages(userId, messages);
-  });
-};
-
-export const updateChatLastMessage = async (chatId, { lastMessage, userName, timestamp }) => {
-  const chatRef = getSafeChatRef(chatId);
-  await update(chatRef, {
-    lastMessage,
-    lastUserName: userName,
-    lastMessageTime: timestamp || serverTimestamp(),
+    if (userId) saveSession(userId, messages);
   });
 };
 
 export const sendSupportMessage = async (chatId, messageData) => {
-  const safeChatId = getSafeChatId(chatId);
-  if (!safeChatId) {
-    throw new Error('Invalid support chat id');
-  }
+  const id = safeId(chatId);
+  if (!id) throw new Error('Invalid chat id');
 
-  const messagesRef = getSafeMessagesRef(safeChatId);
-  const newMessageRef = push(messagesRef);
-  const finalMessageData = {
+  const data = {
     ...messageData,
     text: sanitizeMessageText(messageData.text),
     userName: sanitizeUserName(messageData.userName),
     timestamp: messageData.timestamp || serverTimestamp(),
-    senderType: messageData.senderType || (messageData.direction === 'admin' ? 'admin' : 'user'),
+    senderType: messageData.senderType || 'user',
     intent: messageData.intent || classifyIntent(messageData.text),
   };
 
-  await set(newMessageRef, finalMessageData);
+  const newRef = push(msgsRef(id));
+  await set(newRef, data);
 
-  const chatRef = getSafeChatRef(safeChatId);
-  const isAdmin = finalMessageData.senderType === 'admin';
+  const isAdmin = data.senderType === 'admin';
   const updates = {
-    lastMessage: finalMessageData.text,
-    lastUserName: finalMessageData.userName,
-    lastMessageTime: finalMessageData.timestamp,
-    lastSenderType: finalMessageData.senderType,
-    activeIntent: finalMessageData.intent,
+    lastMessage: data.text,
+    lastUserName: data.userName,
+    lastMessageTime: data.timestamp,
+    lastSenderType: data.senderType,
+    activeIntent: data.intent,
   };
-
-  if (!isAdmin) {
-    updates.userName = finalMessageData.userName;
-  }
-
-  await update(chatRef, updates);
+  if (!isAdmin) updates.userName = data.userName;
+  await update(chatRef(id), updates);
 
   if (isAdmin) {
-    await update(chatRef, { unreadCount: 0, routedToAdmin: true, assignedTo: 'admin' });
-  } else if (finalMessageData.senderType === 'user') {
-    const unreadSnap = await get(ref(rtdb, `${SUPPORT_CHAT_PATH(safeChatId)}/unreadCount`));
-    const currentUnread = unreadSnap.val() || 0;
-    await update(chatRef, { unreadCount: currentUnread + 1 });
+    await update(chatRef(id), { unreadCount: 0, routedToAdmin: true, assignedTo: 'admin' });
+  } else if (data.senderType === 'user') {
+    const snap = await get(ref(rtdb, `${CHAT_PATH(id)}/unreadCount`));
+    await update(chatRef(id), { unreadCount: (snap.val() || 0) + 1 });
   }
 
-  persistSupportChatState(safeChatId, {
-    lastMessage: finalMessageData.text,
-    lastUserName: finalMessageData.userName,
-    lastMessageTime: finalMessageData.timestamp,
-  });
-
-  return newMessageRef;
+  persistSupportChatState(id, { lastMessage: data.text, lastUserName: data.userName, lastMessageTime: data.timestamp });
+  return newRef;
 };
 
 export const ensureConversationThread = async ({ chatId, userId, userName }) => {
-  const safeChatId = getSafeChatId(chatId);
-  if (!safeChatId) {
-    throw new Error('Invalid support chat id');
-  }
+  const id = safeId(chatId);
+  if (!id) throw new Error('Invalid chat id');
 
-  const chatRef = getSafeChatRef(safeChatId);
-  const snapshot = await get(chatRef);
-  if (snapshot.exists()) return snapshot.val();
+  const snap = await get(chatRef(id));
+  if (snap.exists()) return snap.val();
 
-  const initialThread = {
-    userId,
-    userName,
+  clearSession(userId);
+
+  const thread = {
+    userId, userName,
     unreadCount: 0,
     routedToAdmin: false,
     assignedTo: 'ai',
     activeIntent: 'ai',
     createdAt: serverTimestamp(),
-    lastMessage: 'Xin chào! Em có thể giúp gì cho anh/chị ạ?',
+    lastMessage: '',
     lastMessageTime: serverTimestamp(),
     lastSenderType: 'system',
   };
 
-  clearSessionMessages(userId);
-  persistSupportChatState(safeChatId, {
-    lastMessage: initialThread.lastMessage,
-    lastUserName: userName,
-    lastMessageTime: initialThread.lastMessageTime,
-    messages: [],
-  });
+  await set(chatRef(id), thread);
 
-  await set(chatRef, initialThread);
-  await set(ref(rtdb, `${SUPPORT_MESSAGES_PATH(safeChatId)}/welcome`), {
-    text: 'Xin chào! Em có thể giúp gì cho anh/chị ạ?',
-    userId: 'system',
-    userName: 'Hệ thống',
-    senderType: 'system',
-    direction: 'system',
-    intent: INTENT_TYPES.SYSTEM,
+  // Tin nhắn chào tự động thông minh
+  const hour = new Date().getHours();
+  const greet = hour < 11 ? 'buổi sáng' : hour < 14 ? 'buổi trưa' : hour < 18 ? 'buổi chiều' : 'buổi tối';
+  const firstName = userName?.split(' ').pop() || 'bạn';
+  const welcomeText = `Chào ${greet} ${firstName}! 👋 Em là Hubi — trợ lý AI của FoodHub. Em có thể giúp anh/chị tư vấn món ăn, kiểm tra đơn hàng, hoặc hướng dẫn đặt hàng. Anh/chị cần gì ạ? 😊`;
+
+  await set(ref(rtdb, `${MESSAGES_PATH(id)}/welcome`), {
+    text: welcomeText,
+    userId: 'ai',
+    userName: 'Hubi AI',
+    senderType: 'ai',
+    direction: 'bot',
+    intent: INTENT_TYPES.AI,
     timestamp: serverTimestamp(),
   });
 
-  const refreshed = await get(chatRef);
+  await update(chatRef(id), { lastMessage: welcomeText, lastMessageTime: serverTimestamp() });
+
+  const refreshed = await get(chatRef(id));
   return refreshed.val();
 };
 
 export const routeConversationMessage = async ({ chatId, text, userId, userName, messages = [] }) => {
-  const safeChatId = getSafeChatId(chatId);
+  const id = safeId(chatId);
   const safeText = sanitizeMessageText(text);
-  const safeUserName = sanitizeUserName(userName);
+  const safeUser = sanitizeUserName(userName);
   const intent = classifyIntent(safeText);
-  const chatRef = getSafeChatRef(safeChatId);
 
-  await ensureConversationThread({ chatId: safeChatId, userId, userName: safeUserName });
+  await ensureConversationThread({ chatId: id, userId, userName: safeUser });
 
-  const userMessage = await sendSupportMessage(safeChatId, {
-    text: safeText,
-    userId,
-    userName: safeUserName,
-    senderType: 'user',
-    direction: 'user',
-    intent,
+  // Lưu tin nhắn user
+  const userMsg = await sendSupportMessage(id, {
+    text: safeText, userId, userName: safeUser,
+    senderType: 'user', direction: 'user', intent,
     routedToAdmin: intent === INTENT_TYPES.ADMIN,
   });
 
+  // Route sang admin ngay nếu keyword cứng
   if (intent === INTENT_TYPES.ADMIN) {
-    await update(chatRef, {
-      routedToAdmin: true,
-      routingReason: 'keyword',
-      assignedTo: 'admin',
-      activeIntent: 'admin',
+    await update(chatRef(id), { routedToAdmin: true, routingReason: 'keyword', assignedTo: 'admin', activeIntent: 'admin' });
+    await sendSupportMessage(id, {
+      text: 'Em đã ghi nhận và chuyển cho nhân viên hỗ trợ anh/chị ngay ạ. Vui lòng chờ trong giây lát! 🙏',
+      userId: 'ai', userName: 'Hubi AI',
+      senderType: 'ai', direction: 'bot', intent: INTENT_TYPES.AI,
     });
-    return { routedToAdmin: true, userMessage, intent };
+    return { routedToAdmin: true, userMsg, intent };
   }
 
-  const knowledge = await resolveKnowledge({ text: safeText, userId });
-  if (knowledge) {
-    await sendSupportMessage(safeChatId, {
-      text: knowledge.summary,
-      userId: 'ai',
-      userName: 'AI tư vấn',
-      senderType: 'ai',
-      direction: 'bot',
-      intent: INTENT_TYPES.AI,
-      metadata: { knowledgeType: knowledge.type },
-    });
+  // Phát hiện dữ liệu cần fetch
+  const needs = detectDataNeeds(safeText);
+  const contextData = await fetchContextData({ needs, userId });
 
-    await update(chatRef, {
-      routedToAdmin: false,
-      routingReason: knowledge.type,
-      assignedTo: 'ai',
-      activeIntent: 'ai',
+  // Tạo model với context thực tế
+  const model = createAiModel(contextData);
+  if (!model) {
+    await sendSupportMessage(id, {
+      text: 'Dạ em chưa sẵn sàng lúc này. Em đã chuyển cho nhân viên hỗ trợ anh/chị ạ.',
+      userId: 'ai', userName: 'Hubi AI',
+      senderType: 'system', direction: 'system', intent: INTENT_TYPES.SYSTEM,
     });
-
-    return { routedToAdmin: false, userMessage, intent: INTENT_TYPES.AI, knowledge };
-  }
-
-  if (!aiModel) {
-    await sendSupportMessage(safeChatId, {
-      text: 'Dạ em chưa sẵn sàng trả lời lúc này. Em đã ghi nhận tin nhắn và sẽ chuyển cho admin hỗ trợ anh/chị ạ.',
-      userId: 'ai',
-      userName: 'AI tư vấn',
-      senderType: 'system',
-      direction: 'system',
-      intent: INTENT_TYPES.SYSTEM,
-    });
-    await update(chatRef, {
-      routedToAdmin: true,
-      routingReason: 'ai_unavailable',
-      assignedTo: 'admin',
-      activeIntent: 'admin',
-    });
-    return { routedToAdmin: true, userMessage, intent: INTENT_TYPES.SYSTEM };
+    await update(chatRef(id), { routedToAdmin: true, routingReason: 'ai_unavailable', assignedTo: 'admin', activeIntent: 'admin' });
+    return { routedToAdmin: true, userMsg, intent: INTENT_TYPES.SYSTEM };
   }
 
   try {
-    const contextMessages = Array.isArray(messages) && messages.length > 0
+    // Lấy lịch sử hội thoại để AI có context
+    const history = (Array.isArray(messages) && messages.length > 0)
       ? messages
-      : (readSessionMessages(userId) || []);
-    const chat = aiModel.startChat({ history: buildConversationContext(contextMessages) });
+      : (readSession(userId) || []);
+
+    const chat = model.startChat({ history: buildConversationContext(history) });
     const result = await chat.sendMessage(safeText);
-    const botResponse = result.response.text()?.trim();
-    if (!botResponse) throw new Error('Empty AI response');
+    const reply = result.response.text()?.trim();
+    if (!reply) throw new Error('Empty AI response');
 
-    await sendSupportMessage(safeChatId, {
-      text: botResponse,
-      userId: 'ai',
-      userName: 'AI tư vấn',
-      senderType: 'ai',
-      direction: 'bot',
-      intent: INTENT_TYPES.AI,
+    await sendSupportMessage(id, {
+      text: reply,
+      userId: 'ai', userName: 'Hubi AI',
+      senderType: 'ai', direction: 'bot', intent: INTENT_TYPES.AI,
     });
 
-    await update(chatRef, {
-      routedToAdmin: false,
-      routingReason: 'ai',
-      assignedTo: 'ai',
-      activeIntent: 'ai',
-    });
+    await update(chatRef(id), { routedToAdmin: false, routingReason: 'ai', assignedTo: 'ai', activeIntent: 'ai' });
+    return { routedToAdmin: false, userMsg, intent: INTENT_TYPES.AI };
 
-    return { routedToAdmin: false, userMessage, intent: INTENT_TYPES.AI };
-  } catch (error) {
-    await sendSupportMessage(safeChatId, {
-      text: 'Dạ em đã ghi nhận và chuyển cho admin hỗ trợ anh/chị ngay ạ.',
-      userId: 'system',
-      userName: 'Hệ thống',
-      senderType: 'system',
-      direction: 'system',
-      intent: INTENT_TYPES.SYSTEM,
+  } catch (err) {
+    console.error('AI error:', err);
+    await sendSupportMessage(id, {
+      text: 'Dạ em xin lỗi, em gặp sự cố nhỏ. Em đã chuyển cho nhân viên hỗ trợ anh/chị ngay ạ! 🙏',
+      userId: 'system', userName: 'Hệ thống',
+      senderType: 'system', direction: 'system', intent: INTENT_TYPES.SYSTEM,
     });
-    await update(chatRef, {
-      routedToAdmin: true,
-      routingReason: 'ai_error',
-      assignedTo: 'admin',
-      activeIntent: 'admin',
-    });
-    return { routedToAdmin: true, userMessage, intent: INTENT_TYPES.SYSTEM, error };
+    await update(chatRef(id), { routedToAdmin: true, routingReason: 'ai_error', assignedTo: 'admin', activeIntent: 'admin' });
+    return { routedToAdmin: true, userMsg, intent: INTENT_TYPES.SYSTEM, err };
   }
 };
 
 export const markChatAsRead = async (chatId) => {
-  const safeChatId = getSafeChatId(chatId);
-  const chatRef = getSafeChatRef(safeChatId);
-  await update(chatRef, { unreadCount: 0 });
-  const persisted = readSupportChatState(safeChatId) || {};
-  persistSupportChatState(safeChatId, { ...persisted, unreadCount: 0 });
+  const id = safeId(chatId);
+  await update(chatRef(id), { unreadCount: 0 });
+  const p = readSupportChatState(id) || {};
+  persistSupportChatState(id, { ...p, unreadCount: 0 });
 };
 
 export const clearSupportChatCache = (chatId) => clearSupportChatState(chatId);
 export const clearAllSupportChatCache = () => clearAllSupportChatState();
-
 export const isSupportChatRoutedToAdmin = (chat) => Boolean(chat?.routedToAdmin);
+export const updateChatLastMessage = async (chatId, { lastMessage, userName, timestamp }) => {
+  await update(chatRef(chatId), { lastMessage, lastUserName: userName, lastMessageTime: timestamp || serverTimestamp() });
+};

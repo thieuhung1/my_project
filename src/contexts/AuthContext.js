@@ -1,7 +1,4 @@
-// ============================================================
-// AuthContext.js - Context xác thực người dùng (Firebase Auth)
-// File này quản lý đăng nhập, đăng ký, đăng xuất, profile và role người dùng.
-// ============================================================
+
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import {

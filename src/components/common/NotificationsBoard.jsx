@@ -1,6 +1,3 @@
-// NotificationsBoard.jsx - Bảng hiển thị danh sách thông báo theo dạng khung lớn.
-// File này dùng cho trang hoặc dashboard cần xem nhiều thông báo cùng lúc.
-
 import React, { useEffect, useMemo, useState } from 'react';
 import { getAdminNotifications, getNotificationsByAccount, NOTIFICATION_TYPES } from '../../features/controllers/notificationService';
 import { useAuth } from '../../contexts/AuthContext';

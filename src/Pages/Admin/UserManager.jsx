@@ -46,7 +46,6 @@ export default function UserManager() {
     </div>
   );
 
-  const today = new Date().toLocaleDateString('vi-VN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
   const getInitials = (name='') => name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
 
   const roleMap = {
@@ -58,13 +57,6 @@ export default function UserManager() {
 
   return (
     <div className="content">
-      <div className="topbar">
-        <div>
-          <h1>Người Dùng</h1>
-          <small style={{textTransform:'capitalize'}}>{today}</small>
-        </div>
-      </div>
-
       <div className="panel" style={{padding:0, overflow:'hidden'}}>
         <div className="panel-head" style={{padding:'16px 20px', fontSize:18, fontWeight:700, borderBottom:'1px solid #f1f5f9'}}>
           Quản Lý Người Dùng

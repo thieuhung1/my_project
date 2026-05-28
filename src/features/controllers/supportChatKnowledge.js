@@ -1,12 +1,21 @@
 import { getAllProducts } from './productService';
 import { getOrderById, getOrdersByUser } from './orderService';
-import { formatCurrency, formatChatTimestamp, normalizeText } from './supportChatUtils';
+import { normalizeText } from './supportChatUtils';
 
-const AI_ROUTING_KEYWORDS = [
-  'admin', 'nhân viên', 'hỗ trợ', 'khiếu nại', 'hoàn tiền', 'đổi món', 'đổi trả',
-  'lỗi', 'sai đơn', 'không nhận được', 'giao chậm', 'thanh toán', 'hoá đơn', 'hóa đơn',
-  'đơn hàng', 'trả hàng', 'gặp admin', 'liên hệ admin', 'người thật', 'tư vấn viên',
-  'chuyển người thật', 'gọi admin', 'hỗ trợ trực tiếp',
+// Chỉ route sang admin khi thực sự cần người thật — không route các câu hỏi thông thường
+const HARD_ADMIN_KEYWORDS = [
+  'khieu nai', 'khiếu nại',
+  'hoan tien', 'hoàn tiền',
+  'doi tra', 'đổi trả',
+  'sai don', 'sai đơn',
+  'mat don', 'mất đơn',
+  'gap admin', 'gặp admin',
+  'nguoi that', 'người thật',
+  'chuyen nguoi that', 'chuyển người thật',
+  'goi admin', 'gọi admin',
+  'ho tro truc tiep', 'hỗ trợ trực tiếp',
+  'lien he admin', 'liên hệ admin',
+  'tu van vien', 'tư vấn viên',
 ];
 
 export const INTENT_TYPES = {
@@ -15,142 +24,77 @@ export const INTENT_TYPES = {
   SYSTEM: 'system',
 };
 
-const shouldRouteToAdmin = (text = '') => {
-  const value = normalizeText(text);
-  if (!value) return false;
-  return AI_ROUTING_KEYWORDS.some((keyword) => value.includes(keyword));
-};
-
 export const classifyIntent = (text = '') => {
   const value = normalizeText(text);
   if (!value) return INTENT_TYPES.SYSTEM;
-  if (shouldRouteToAdmin(value)) return INTENT_TYPES.ADMIN;
+  // Chỉ route admin khi match keyword cứng — để AI xử lý mọi thứ còn lại
+  if (HARD_ADMIN_KEYWORDS.some((kw) => value.includes(kw))) return INTENT_TYPES.ADMIN;
   return INTENT_TYPES.AI;
 };
 
-const summarizeProducts = (products = [], limit = 5) =>
-  products.slice(0, limit).map((product) => ({
-    id: product.id,
-    name: product.name || product.title || 'Sản phẩm',
-    price: formatCurrency(product.price || product.salePrice || 0),
-    rawPrice: Number(product.price || product.salePrice || 0),
-    category: product.category || 'Khác',
-    featured: Boolean(product.featured),
-    discount: Number(product.discount || 0),
-  }));
+// Phát hiện loại câu hỏi để fetch đúng dữ liệu cho AI
+export const detectDataNeeds = (text = '') => {
+  const v = normalizeText(text);
+  const needs = { products: false, orders: false, orderId: null };
 
-const summarizeOrders = (orders = [], limit = 3) =>
-  orders.slice(0, limit).map((order) => ({
-    id: order.id,
-    status: ({
-      PENDING: 'Chờ xử lý',
-      WAITING_FOR_SHIPPER: 'Chờ shipper',
-      CONFIRMED: 'Đã xác nhận',
-      DELIVERING: 'Đang giao hàng',
-      COMPLETED: 'Hoàn thành',
-      FAILED: 'Thất bại',
-      CANCELLED: 'Đã hủy',
-    }[String(order.status).toUpperCase()] || order.status || 'Không rõ'),
-    total: formatCurrency(order.totalAmount || order.total || 0),
-    createdAt: formatChatTimestamp(order.createdAt),
-    itemCount: Array.isArray(order.items) ? order.items.length : 0,
-  }));
-
-const formatOrderAnswerById = (order) => {
-  if (!order) return 'Mình chưa tìm thấy đơn hàng theo mã bạn cung cấp.';
-  const items = Array.isArray(order.items) ? order.items : [];
-  const topItems = items.slice(0, 5).map((item) => `- ${item.productName || item.name || 'Sản phẩm'} x${item.quantity || 1}`).join('\n');
-  return [
-    `Thông tin đơn ${order.id}`,
-    `- Trạng thái: ${({
-      PENDING: 'Chờ xử lý',
-      WAITING_FOR_SHIPPER: 'Chờ shipper',
-      CONFIRMED: 'Đã xác nhận',
-      DELIVERING: 'Đang giao hàng',
-      COMPLETED: 'Hoàn thành',
-      FAILED: 'Thất bại',
-      CANCELLED: 'Đã hủy',
-    }[String(order.status).toUpperCase()] || order.status || 'Không rõ')}`,
-    `- Tổng tiền: ${formatCurrency(order.totalAmount || order.total || 0)}`,
-    order.paymentStatus ? `- Thanh toán: ${order.paymentStatus}` : null,
-    order.createdAt ? `- Tạo lúc: ${formatChatTimestamp(order.createdAt)}` : null,
-    topItems ? `- Món trong đơn:\n${topItems}` : null,
-  ].filter(Boolean).join('\n');
-};
-
-const formatRecentOrdersAnswer = (orders = []) => {
-  if (!orders.length) return 'Mình chưa thấy đơn hàng nào của bạn trong hệ thống.';
-  const lines = summarizeOrders(orders, 3)
-    .map((order, index) => `${index + 1}. Đơn ${order.id}\n   Trạng thái: ${order.status}\n   Tổng tiền: ${order.total}${order.createdAt ? `\n   Cập nhật: ${order.createdAt}` : ''}`)
-    .join('\n\n');
-  return `Mình tìm thấy ${orders.length} đơn gần đây của bạn:\n\n${lines}`;
-};
-
-const formatProductAnswer = (products = [], queryText = '') => {
-  if (!products.length) return 'Mình chưa thấy sản phẩm nào trong menu lúc này.';
-  const value = normalizeText(queryText);
-  const list = summarizeProducts(products, 5);
-  const saleItems = products.filter((product) => Number(product.discount || 0) > 0 || (Number(product.salePrice || 0) > 0 && Number(product.salePrice || 0) < Number(product.price || 0)));
-  const featuredItems = products.filter((product) => product.featured || product.isFeatured);
-
-  const formatListBlock = (title, items) => {
-    if (!items.length) return `${title}: chưa có dữ liệu nổi bật.`;
-    return `${title}:\n${items.map((item, index) => `${index + 1}. ${item.name} • ${item.price}${item.category ? ` • ${item.category}` : ''}`).join('\n')}`;
-  };
-
-  if (value.includes('khuyen mai') || value.includes('giảm giá') || value.includes('giam gia')) {
-    return [
-      `Hiện có ${saleItems.length} sản phẩm đang ưu đãi.`,
-      formatListBlock('Danh sách ưu đãi', summarizeProducts(saleItems, 5)),
-    ].join('\n\n');
+  // Hỏi về menu/món ăn
+  if (
+    v.includes('mon') || v.includes('menu') || v.includes('an gi') || v.includes('ăn gì') ||
+    v.includes('san pham') || v.includes('sản phẩm') || v.includes('khuyen mai') ||
+    v.includes('giam gia') || v.includes('giảm giá') || v.includes('hot') ||
+    v.includes('ngon') || v.includes('gia') || v.includes('giá') || v.includes('bao nhieu') ||
+    v.includes('bao nhiêu') || v.includes('combo') || v.includes('goi y') || v.includes('gợi ý')
+  ) {
+    needs.products = true;
   }
 
-  if (value.includes('hot') || value.includes('noi bat') || value.includes('nổi bật')) {
-    return [
-      `Hiện có ${featuredItems.length} sản phẩm nổi bật.`,
-      formatListBlock('Danh sách nổi bật', summarizeProducts(featuredItems, 5)),
-    ].join('\n\n');
+  // Hỏi về đơn hàng
+  if (
+    v.includes('don') || v.includes('đơn') || v.includes('order') ||
+    v.includes('trang thai') || v.includes('trạng thái') || v.includes('giao hang') ||
+    v.includes('giao hàng') || v.includes('lich su') || v.includes('lịch sử') ||
+    v.includes('dang giao') || v.includes('đang giao') || v.includes('hoan thanh') ||
+    v.includes('hoàn thành') || v.includes('cho xu ly') || v.includes('chờ xử lý')
+  ) {
+    needs.orders = true;
+    // Tìm mã đơn cụ thể (8+ ký tự alphanumeric)
+    const match = text.match(/\b[a-zA-Z0-9]{8,}\b/);
+    if (match) needs.orderId = match[0];
   }
 
-  return [
-    `Mình đang có ${products.length} sản phẩm trong menu.`,
-    formatListBlock('Một vài món tiêu biểu', list),
-  ].join('\n\n');
+  return needs;
 };
 
-export const resolveKnowledge = async ({ text, userId }) => {
-  const value = normalizeText(text);
+// Fetch dữ liệu thực từ Firebase để đưa vào context AI
+export const fetchContextData = async ({ needs, userId }) => {
+  const context = {};
 
-  if (value.includes('don') || value.includes('order') || value.includes('trang thai') || value.includes('trạng thái') || value.includes('my order')) {
-    const orderCodeMatch = value.match(/\b[a-zA-Z0-9_-]{8,}\b/);
-    if (orderCodeMatch) {
-      const orderId = orderCodeMatch[0];
-      try {
-        const order = await getOrderById(orderId);
-        return { type: 'order', data: order, summary: formatOrderAnswerById(order) };
-      } catch {
-        return { type: 'order', data: null, summary: 'Mình chưa tìm thấy đơn hàng theo mã bạn cung cấp.' };
-      }
-    }
+  const fetches = [];
 
-    if (userId) {
-      try {
-        const orders = await getOrdersByUser(userId);
-        return { type: 'order', data: orders, summary: formatRecentOrdersAnswer(orders) };
-      } catch {
-        return { type: 'order', data: null, summary: 'Mình chưa đọc được lịch sử đơn hàng của bạn lúc này.' };
-      }
+  if (needs.products) {
+    fetches.push(
+      getAllProducts()
+        .then((products) => { context.products = products; })
+        .catch(() => {})
+    );
+  }
+
+  if (needs.orders) {
+    if (needs.orderId) {
+      fetches.push(
+        getOrderById(needs.orderId)
+          .then((order) => { context.singleOrder = order; })
+          .catch(() => {})
+      );
+    } else if (userId && userId !== 'guest') {
+      fetches.push(
+        getOrdersByUser(userId)
+          .then((orders) => { context.orders = orders; })
+          .catch(() => {})
+      );
     }
   }
 
-  if (value.includes('mon') || value.includes('menu') || value.includes('san pham') || value.includes('sản phẩm') || value.includes('khuyen mai') || value.includes('giảm giá') || value.includes('giam gia') || value.includes('hot')) {
-    try {
-      const products = await getAllProducts();
-      return { type: 'menu', data: products, summary: formatProductAnswer(products, value) };
-    } catch {
-      return { type: 'menu', data: null, summary: 'Mình chưa đọc được dữ liệu menu từ Firebase lúc này.' };
-    }
-  }
-
-  return null;
+  await Promise.all(fetches);
+  return Object.keys(context).length > 0 ? context : null;
 };

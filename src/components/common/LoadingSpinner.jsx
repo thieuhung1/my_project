@@ -1,6 +1,3 @@
-// LoadingSpinner.jsx - Spinner loading dùng chung cho toàn bộ ứng dụng.
-// File này hỗ trợ hiển thị trạng thái đang tải ở dạng thường hoặc toàn màn hình.
-
 import React from 'react';
 import { motion } from 'framer-motion';
 

@@ -1,31 +1,66 @@
-// ChatbotIcon/index.jsx - Cửa sổ chatbot nổi dùng để tư vấn khách hàng.
-// File này quản lý mở/đóng chat, gửi tin nhắn và nhận phản hồi AI/admin.
-
 import React, { useEffect, useRef, useState } from 'react';
 import '../../../styles/Chatbot.css';
 import { subscribeToMessages, routeConversationMessage, ensureConversationThread } from '../../../features/controllers/supportChatService';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useLocation } from 'react-router-dom';
 
-const quickReplies = [
-  { label: 'Đặt hàng', msg: 'Tôi muốn đặt món ăn' },
-  { label: 'Theo dõi đơn', msg: 'Kiểm tra đơn hàng của tôi' },
-  { label: 'Khuyến mãi', msg: 'Có ưu đãi gì hôm nay?' },
-  { label: 'Gặp Admin', msg: 'Nhờ Admin hỗ trợ' },
-];
+// Quick replies theo ngữ cảnh trang
+const getContextualQuickReplies = (pathname) => {
+  if (pathname.includes('/products') || pathname.includes('/menu')) {
+    return [
+      { label: '🍜 Món ngon hôm nay', msg: 'Hôm nay có món gì ngon không em?' },
+      { label: '💰 Món dưới 50k', msg: 'Gợi ý món ăn dưới 50.000đ cho em' },
+      { label: '🔥 Món bán chạy', msg: 'Món nào đang bán chạy nhất?' },
+      { label: '🎁 Khuyến mãi', msg: 'Có khuyến mãi gì hôm nay không?' },
+    ];
+  }
+  if (pathname.includes('/orders') || pathname.includes('/cart')) {
+    return [
+      { label: '🪑 Chọn bàn', msg: 'Hướng dẫn em chọn bàn ăn tại quán' },
+      { label: '💳 Thanh toán VNPay', msg: 'Thanh toán VNPay như thế nào?' },
+      { label: '🚚 Phí giao hàng', msg: 'Phí giao hàng tính như thế nào?' },
+      { label: '🎟️ Dùng mã giảm giá', msg: 'Cách dùng mã giảm giá?' },
+    ];
+  }
+  if (pathname.includes('/my-orders')) {
+    return [
+      { label: '📦 Xem đơn của tôi', msg: 'Cho em xem đơn hàng gần nhất' },
+      { label: '⏱️ Đơn đang giao', msg: 'Đơn hàng của em đang ở đâu rồi?' },
+      { label: '❌ Hủy đơn', msg: 'Em muốn hủy đơn hàng' },
+      { label: '🔄 Đặt lại', msg: 'Em muốn đặt lại đơn cũ' },
+    ];
+  }
+  return [
+    { label: '🍜 Gợi ý món', msg: 'Gợi ý món ăn ngon cho em' },
+    { label: '📦 Đơn hàng', msg: 'Kiểm tra đơn hàng của em' },
+    { label: '🎁 Ưu đãi hôm nay', msg: 'Có ưu đãi gì hôm nay không?' },
+    { label: '🧑‍💼 Gặp nhân viên', msg: 'Em muốn gặp nhân viên hỗ trợ' },
+  ];
+};
+
+// Lời chào theo thời gian
+const getGreeting = (name) => {
+  const hour = new Date().getHours();
+  const timeGreet = hour < 11 ? 'Chào buổi sáng' : hour < 14 ? 'Chào buổi trưa' : hour < 18 ? 'Chào buổi chiều' : 'Chào buổi tối';
+  const displayName = name ? ` ${name.split(' ').pop()}` : '';
+  return `${timeGreet}${displayName}! 👋`;
+};
 
 const Chatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isTyping] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [isHandedOff, setIsHandedOff] = useState(false);
-  const [intentLabel] = useState('ai');
+  const [unreadCount, setUnreadCount] = useState(0);
   const messagesEndRef = useRef(null);
+  const prevMsgCountRef = useRef(0);
   const { user } = useAuth();
+  const location = useLocation();
 
   const chatId = user ? user.uid : 'guest';
+  const quickReplies = getContextualQuickReplies(location.pathname);
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -49,16 +84,13 @@ const Chatbot = () => {
       }, user?.uid || chatId);
     };
 
-    init().catch((error) => {
-      console.error('Không thể khởi tạo cuộc trò chuyện:', error);
-      setMessages([
-        {
-          id: 'system-error',
-          text: 'Không thể khởi tạo cuộc trò chuyện lúc này. Vui lòng thử lại sau.',
-          senderType: 'system',
-          direction: 'system',
-        },
-      ]);
+    init().catch(() => {
+      setMessages([{
+        id: 'system-error',
+        text: 'Không thể khởi tạo cuộc trò chuyện lúc này. Vui lòng thử lại sau.',
+        senderType: 'system',
+        direction: 'system',
+      }]);
     });
 
     return () => {
@@ -67,10 +99,20 @@ const Chatbot = () => {
     };
   }, [chatId, isOpen, user]);
 
+  // Đếm tin nhắn mới khi chat đóng
+  useEffect(() => {
+    if (isOpen) {
+      setUnreadCount(0);
+      prevMsgCountRef.current = messages.length;
+      return;
+    }
+    const newCount = messages.length - prevMsgCountRef.current;
+    if (newCount > 0) setUnreadCount(v => v + newCount);
+  }, [messages, isOpen]);
+
   useEffect(() => {
     if (!isOpen) return undefined;
     return () => {
-      // Chỉ reset hiển thị khi đóng popup, KHÔNG xóa lịch sử trên database.
       setMessages([]);
       setIsInitialized(false);
       setIsHandedOff(false);
@@ -99,8 +141,7 @@ const Chatbot = () => {
         userName: user?.displayName || user?.email?.split('@')[0] || 'Khách',
         messages,
       });
-    } catch (error) {
-      console.error('Lỗi xử lý hội thoại:', error);
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -115,6 +156,11 @@ const Chatbot = () => {
     }
   };
 
+  const handleOpen = () => {
+    setIsOpen(true);
+    setUnreadCount(0);
+  };
+
   return (
     <div className="chatbot-container">
       {isOpen && (
@@ -127,9 +173,11 @@ const Chatbot = () => {
               <div>
                 <div className="title-row">
                   <h3>Tư vấn FoodHub</h3>
-                  <span className="handoff-pill">{isHandedOff ? 'admin' : 'ai'}</span>
+                  <span className={`handoff-pill ${isHandedOff ? 'handoff-pill--admin' : ''}`}>
+                    {isHandedOff ? '👤 admin' : '🤖 AI'}
+                  </span>
                 </div>
-                <p>{isHandedOff ? 'Đang có admin tham gia cùng cuộc trò chuyện' : 'AI hỗ trợ nhanh, tự chuyển admin khi cần'}</p>
+                <p>{isHandedOff ? 'Nhân viên đang hỗ trợ bạn' : 'Trả lời tức thì • Chuyển admin khi cần'}</p>
               </div>
             </div>
             <button onClick={() => setIsOpen(false)} aria-label="Đóng chat bot">✕</button>
@@ -141,8 +189,8 @@ const Chatbot = () => {
                 <div className="chat-empty-icon">
                   <i className="bi bi-chat-square-dots" />
                 </div>
-                <h4>Xin chào anh/chị</h4>
-                <p>Chọn nhanh một nhu cầu hoặc nhắn trực tiếp, em sẽ hỗ trợ bằng AI và chuyển admin khi cần.</p>
+                <h4>{getGreeting(user?.displayName)}</h4>
+                <p>Em là trợ lý AI của FoodHub. Anh/chị cần gì em giúp ngay nhé!</p>
                 <div className="quick-replies">
                   {quickReplies.map((reply) => (
                     <button key={reply.label} onClick={() => handleSend(reply.msg)} disabled={isLoading}>
@@ -152,38 +200,56 @@ const Chatbot = () => {
                 </div>
               </div>
             ) : (
-              messages.map((msg, index) => {
-                const isSystem = msg.senderType === 'system' || msg.direction === 'system';
-                const isAi = msg.senderType === 'ai' || msg.direction === 'bot';
-                const isAdmin = msg.senderType === 'admin' || msg.direction === 'admin';
-                const isUser = msg.senderType === 'user' || msg.direction === 'user' || (!isAi && !isAdmin && !isSystem);
+              <>
+                {messages.map((msg, index) => {
+                  const isSystem = msg.senderType === 'system' || msg.direction === 'system';
+                  const isAi = msg.senderType === 'ai' || msg.direction === 'bot';
+                  const isAdmin = msg.senderType === 'admin' || msg.direction === 'admin';
+                  const isUser = !isAi && !isAdmin && !isSystem;
 
-                if (isSystem) {
+                  if (isSystem) {
+                    return (
+                      <div key={msg.id || index} className="chat-system-note">
+                        {msg.text}
+                      </div>
+                    );
+                  }
+
                   return (
-                    <div key={msg.id || index} className="chat-system-note">
-                      {msg.text}
+                    <div key={msg.id || index} className={`message ${isUser ? 'user' : 'bot'} ${isAdmin ? 'admin' : ''}`}>
+                      <div className="message-sender">
+                        {isUser ? '🧑 Bạn' : isAdmin ? '👤 Nhân viên' : '🤖 AI FoodHub'}
+                      </div>
+                      <div className="message-text">{msg.text}</div>
                     </div>
                   );
-                }
-
-                return (
-                  <div key={msg.id || index} className={`message ${isUser ? 'user' : 'bot'} ${isAdmin ? 'admin' : ''}`}>
-                    <div className="message-sender">
-                      {isUser ? 'Bạn' : isAdmin ? 'Admin' : 'AI tư vấn'}
-                    </div>
-                    <div className="message-text">{msg.text}</div>
+                })}
+                {/* Quick replies sau tin nhắn cuối của bot */}
+                {!isLoading && messages.length > 0 && !isHandedOff && (
+                  <div className="chat-quick-suggest">
+                    {quickReplies.slice(0, 2).map((reply) => (
+                      <button key={reply.label} onClick={() => handleSend(reply.msg)} disabled={isLoading}>
+                        {reply.label}
+                      </button>
+                    ))}
                   </div>
-                );
-              })
+                )}
+              </>
             )}
-            {isTyping && <div className="typing-indicator">Đang nhập...</div>}
-            {isLoading && <div className="message bot">⏳ Đang suy nghĩ...</div>}
+            {isLoading && (
+              <div className="message bot">
+                <div className="message-sender">🤖 AI FoodHub</div>
+                <div className="typing-dots"><span/><span/><span/></div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           <div className="chat-footer">
             <div className="chat-handoff-hint">
-              {isHandedOff ? 'Admin đang cùng tham gia cuộc trò chuyện này.' : 'Nhắn tin một lần, hệ thống tự quyết định AI hay admin.'}
+              {isHandedOff
+                ? '👤 Nhân viên đang tham gia hỗ trợ bạn'
+                : '⚡ AI phản hồi tức thì — tự chuyển nhân viên khi cần'}
             </div>
             <div className="chat-input-row">
               <input
@@ -191,20 +257,23 @@ const Chatbot = () => {
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Nhập tin nhắn..."
+                placeholder={isHandedOff ? 'Nhắn với nhân viên...' : 'Hỏi về món ăn, đơn hàng...'}
                 disabled={isLoading}
               />
               <button onClick={() => handleSend()} disabled={isLoading || !input.trim()}>
-                Gửi
+                <i className="bi bi-send-fill" />
               </button>
             </div>
           </div>
         </div>
       )}
 
-      <button className="chat-toggle-btn" onClick={() => setIsOpen((v) => !v)} aria-label="Mở chat bot">
+      <button className="chat-toggle-btn" onClick={handleOpen} aria-label="Mở chat bot">
         <span className="chat-toggle-glow" />
         <i className="bi bi-robot" />
+        {unreadCount > 0 && (
+          <span className="chat-unread-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>
+        )}
       </button>
     </div>
   );

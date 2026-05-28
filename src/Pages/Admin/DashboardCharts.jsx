@@ -61,10 +61,10 @@ export default function DashboardCharts() {
           getAllCategories()
         ]);
 
-        // GIỮ NGUYÊN LOGIC CỦA BẠN
+        // Tính doanh thu từ đơn hoàn thành (COMPLETED) - không phân biệt phương thức thanh toán
         const revenue = orders
-        .filter(o => o.paymentMethod === 'cash' && o.status!== 'cancelled')
-        .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+          .filter(o => o.status === 'COMPLETED')
+          .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
 
         const catMap = {};
         prods.forEach(p => { catMap[p.category] = (catMap[p.category] || 0) + 1; });
@@ -101,7 +101,7 @@ export default function DashboardCharts() {
   return (
     <div className="grid">
       <div className="top-cards" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-        <StatCard title="Doanh Thu" value={`${stats.totalRevenue.toLocaleString()}đ`} sub="Chỉ tính đơn tiền mặt" icon={Ico.cash} grad="linear-gradient(135deg,#22c55e,#7ee787)" />
+        <StatCard title="Doanh Thu" value={`${stats.totalRevenue.toLocaleString()}đ`} sub="Tính từ đơn hoàn thành" icon={Ico.cash} grad="linear-gradient(135deg,#22c55e,#7ee787)" />
         <StatCard title="Sản Phẩm" value={stats.totalProducts} sub="Món đang phục vụ" icon={Ico.product} grad="linear-gradient(135deg,#6a5cff,#8aa4ff)" />
         <StatCard title="Đơn Hàng" value={stats.totalOrders} sub="Tổng lượt mua" icon={Ico.order} grad="linear-gradient(135deg,#ffb86b,#ff7a00)" />
         <StatCard title="Người Dùng" value={stats.totalUsers} sub="Tài khoản đăng ký" icon={Ico.users} grad="linear-gradient(135deg,#a78bfa,#7c3aed)" />

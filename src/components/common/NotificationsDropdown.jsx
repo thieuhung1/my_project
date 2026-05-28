@@ -1,6 +1,3 @@
-// NotificationsDropdown.jsx - Dropdown thông báo nằm trên header.
-// File này tải danh sách thông báo, đếm unread và đánh dấu đã đọc khi mở dropdown.
-// Nó hỗ trợ cả thông báo của user lẫn admin.
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { getAdminNotifications, getNotificationsByAccount, getNotificationsByUser, markNotificationsAsRead, NOTIFICATION_TYPES } from '../../features/controllers/notificationService';

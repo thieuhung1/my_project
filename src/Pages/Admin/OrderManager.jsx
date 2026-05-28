@@ -21,7 +21,7 @@ const STATUS = {
   [ORDER_STATUS.CANCELLED]: { text: 'Đã hủy', bg: '#fef2f2', color: '#b91c1c', bd: '#fecaca' },
   [ORDER_STATUS.FAILED]: { text: 'Thất bại', bg: '#faf5ff', color: '#7e22ce', bd: '#e9d5ff' },
 };
-
+// trạng thái đơn hàng
 const TABS = [
   { key: 'ALL', label: 'Tất cả' },
   { key: 'PENDING', label: 'Chờ xử lý' },
@@ -30,9 +30,18 @@ const TABS = [
   { key: 'COMPLETED', label: 'Hoàn thành' },
 ];
 
+// số bàn
 const TOTAL_TABLES = 20;
+// tên đầu
 
 const initials = (name='') => name.split(' ').filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase();
+const formatMoney = (value = 0) => Number(value || 0).toLocaleString('vi-VN');
+const formatDateTime = (value) => {
+  if (!value) return '—';
+  const date = value?.toDate?.() || (value?.seconds ? new Date(value.seconds * 1000) : new Date(value));
+  return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('vi-VN');
+};
+const escapeCsvCell = (value = '') => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 export default function OrderManager() {
   const [orders, setOrders] = useState([]);
@@ -162,7 +171,82 @@ export default function OrderManager() {
     }
   };
 
-  const today = new Date().toLocaleDateString('vi-VN',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  const exportOrdersToExcel = () => {
+    if (filtered.length === 0) {
+      alert('Không có đơn hàng để xuất Excel');
+      return;
+    }
+
+    const headers = [
+      'Mã đơn',
+      'Ngày tạo',
+      'Khách hàng',
+      'Số điện thoại',
+      'Loại đơn',
+      'Địa chỉ/Bàn',
+      'Sản phẩm',
+      'Tạm tính',
+      'Giảm giá',
+      'Tổng bill',
+      'Thanh toán',
+      'Trạng thái',
+      'Shipper',
+      'Ghi chú',
+    ];
+
+    const rows = filtered.map((order) => {
+      const itemsText = (order.items || [])
+        .map((item) => `${item.productName || 'Sản phẩm'} x${item.quantity || 0} (${formatMoney((item.price || 0) * (item.quantity || 0))}đ)`)
+        .join('; ');
+      const typeLabel = order.type === 'DINE_IN' ? 'Tại quán' : 'Giao hàng';
+      const location = order.type === 'DINE_IN' ? (order.table_id || '—') : (order.address || '—');
+
+      return [
+        order.id,
+        formatDateTime(order.createdAt),
+        order.userName || order.customerName || 'Khách',
+        order.phone || '—',
+        typeLabel,
+        location,
+        itemsText || '—',
+        order.subtotal || order.totalAmount || 0,
+        order.discountAmount || 0,
+        order.totalAmount || 0,
+        order.paymentMethod || '—',
+        STATUS[order.status]?.text || order.status || '—',
+        order.shipperName || 'Không có',
+        order.note || '',
+      ];
+    });
+
+    const totalBill = filtered.reduce((sum, order) => sum + Number(order.totalAmount || 0), 0);
+    const totalDiscount = filtered.reduce((sum, order) => sum + Number(order.discountAmount || 0), 0);
+    const totalSubtotal = filtered.reduce((sum, order) => sum + Number(order.subtotal || order.totalAmount || 0), 0);
+    const summaryRows = [
+      [],
+      ['Tổng số đơn', filtered.length],
+      ['Tổng tạm tính', totalSubtotal],
+      ['Tổng giảm giá', totalDiscount],
+      ['Tổng bill', totalBill],
+    ];
+
+    const csvContent = [
+      headers,
+      ...rows,
+      ...summaryRows,
+    ].map((row) => row.map(escapeCsvCell).join(',')).join('\r\n');
+
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    link.href = url;
+    link.download = `don-hang-bill-${date}.xls`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   if (loading) return (
     <div className="content"><div className="panel" style={{padding:48,textAlign:'center',color:'var(--muted)'}}>Đang tải đơn hàng...</div></div>
@@ -170,20 +254,37 @@ export default function OrderManager() {
 
   return (
     <div className="content">
-      {/* Topbar đúng style Admin.css */}
-      <div className="topbar">
-        <div>
-          <h1>Đơn Hàng</h1>
-          <small style={{textTransform:'capitalize'}}>{today}</small>
+      {/* Thanh tìm kiếm + xuất Excel */}
+      <div style={{display:'flex',gap:10,alignItems:'center',marginBottom:20,flexWrap:'wrap'}}>
+        <div style={{position:'relative',flex:1,minWidth:200}}>
+          <input className="search" placeholder="Tìm mã đơn, tên, SĐT..." value={q} onChange={e=>setQ(e.target.value)} style={{width:'100%',paddingLeft:36}}/>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{position:'absolute',left:12,top:14,opacity:.45}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
         </div>
-        <div style={{position:'relative'}}>
-          <input className="search" placeholder="Tìm mã đơn, tên, SĐT..." value={q} onChange={e=>setQ(e.target.value)} style={{paddingLeft:36}}/>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" style={{position:'absolute',left:12,top:12,opacity:.45}}><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/></svg>
-        </div>
+        <button
+          type="button"
+          onClick={exportOrdersToExcel}
+          disabled={filtered.length === 0}
+          style={{
+            height:44,
+            padding:'0 18px',
+            borderRadius:14,
+            border:'1px solid #15803d',
+            background: filtered.length === 0 ? '#f8fafc' : 'linear-gradient(135deg,#16a34a,#15803d)',
+            color: filtered.length === 0 ? '#94a3b8' : '#fff',
+            fontWeight:800,
+            fontSize:13,
+            cursor: filtered.length === 0 ? 'not-allowed' : 'pointer',
+            boxShadow: filtered.length === 0 ? 'none' : '0 12px 24px rgba(22,163,74,.22)',
+            whiteSpace:'nowrap',
+            flexShrink:0,
+          }}
+        >
+          Xuất Excel bill ({filtered.length})
+        </button>
       </div>
 
       {/* 4 thẻ thống kê - dùng.top-cards +.analysis-card */}
-      <div className="top-cards" style={{marginBottom:18}}>
+      <div className="top-cards" style={{marginBottom:18,clear:'both'}}>
         {[
           {label:'Tổng đơn', value:stats.total, color:'#3a49ff', icon:'📦'},
           {label:'Chờ xử lý', value:stats.pending, color:'#f59e0b', icon:'⏳'},

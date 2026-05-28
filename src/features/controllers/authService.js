@@ -29,7 +29,7 @@ const sanitizeDisplayName = (value = 'User') => String(value || 'User').trim().s
 export const registerWithEmail = async (email, password, displayName) => {
   const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-  const safeDisplayName = sanitizeDisplayName(displayName);
+  const safeDisplayName = sanitizeDisplayName(displayName);//
   if (safeDisplayName.length > 0) {
     try {
       await updateProfile(userCredential.user, { displayName: safeDisplayName });
